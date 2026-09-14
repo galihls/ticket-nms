@@ -1,0 +1,57 @@
+{% load static %}<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ page_title|default:"Dashboard" }} · {{ APP_NAME }}{% endblock %}</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="{% static 'img/logo.jpg' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="layout">
+
+  {% include "partials/sidebar.html" %}
+  <div class="sidebar__scrim" data-nav-close></div>
+
+  <div class="main">
+    {% include "partials/topbar.html" %}
+
+    <main class="content">
+      <div class="content__inner">
+
+        {% if breadcrumb %}
+          <nav class="breadcrumb" aria-label="Navigasi remah">
+            <a href="{% url 'core:dashboard' %}">Beranda</a>
+            {% for label, url in breadcrumb %}
+              <span class="breadcrumb__sep">/</span>
+              {% if url %}<a href="{{ url }}">{{ label }}</a>
+              {% else %}<span class="breadcrumb__current">{{ label }}</span>{% endif %}
+            {% endfor %}
+          </nav>
+        {% endif %}
+
+        {% block page_header %}
+          <div class="page-header">
+            <div class="page-header__text">
+              <h1>{{ page_title }}</h1>
+              {% block page_desc %}{% endblock %}
+            </div>
+            <div class="page-header__actions">{% block page_actions %}{% endblock %}</div>
+          </div>
+        {% endblock %}
+
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+</div>
+
+{% include "partials/messages.html" %}
+
+<script src="{% static 'js/vendor/htmx.min.js' %}" defer></script>
+<script src="{% static 'js/app.js' %}" defer></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

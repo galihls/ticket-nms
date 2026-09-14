@@ -1,0 +1,10 @@
+{% if messages %}
+  <div class="toast-stack" id="toast-stack">
+    {% for message in messages %}
+      {% if message.tags == 'success' %}{% with cls='alert--success' %}{% include "partials/_toast.html" %}{% endwith %}
+      {% elif message.tags == 'error' %}{% with cls='alert--error' %}{% include "partials/_toast.html" %}{% endwith %}
+      {% elif message.tags == 'warning' %}{% with cls='alert--warning' %}{% include "partials/_toast.html" %}{% endwith %}
+      {% else %}{% with cls='alert--info' %}{% include "partials/_toast.html" %}{% endwith %}{% endif %}
+    {% endfor %}
+  </div>
+{% endif %}

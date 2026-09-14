@@ -1,0 +1,430 @@
+{% extends "base.html" %}
+{% load ui %}
+
+{% block page_header %}
+  <div class="page-header">
+    <div class="page-header__text">
+      <div class="row row--wrap" style="gap:8px;margin-bottom:5px">
+        <span class="ticket-no" style="font-size:14px">{{ ticket.number }}</span>
+        <span class="badge {{ ticket.type_badge }}">{{ ticket.get_ticket_type_display }}</span>
+        <span class="badge {{ ticket.status_badge }}">
+          <span class="badge__dot"></span>{{ ticket.get_status_display }}
+        </span>
+        <span class="badge {{ ticket.priority_badge }}">{{ ticket.get_priority_display }}</span>
+        {% if ticket.is_overdue %}
+          <span class="badge badge--danger"><span class="badge__dot"></span>Lewat target</span>
+        {% endif %}
+      </div>
+      <h1>{{ ticket.subject }}</h1>
+      <p class="page-header__desc">
+        Dilaporkan {{ ticket.requester_name }}
+        {% if ticket.company %}· {{ ticket.company }}{% endif %}
+        · {{ ticket.opened_at|date:"d/m/Y H:i" }}
+        · Berjalan {{ ticket.duration_display }}
+      </p>
+    </div>
+
+    <div class="page-header__actions">
+      <a href="{% url 'tickets:edit' ticket.number %}" class="btn btn--secondary">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 16.3 14.6 5.7a2 2 0 0 0-2.8-2.8L1.2 13.5v2.8H4Z" transform="translate(2 0)"/>
+        </svg>
+        Ubah
+      </a>
+
+      {% if ticket.is_closed %}
+        <form method="post" action="{% url 'tickets:reopen' ticket.number %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn--secondary">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3.5 10a6.5 6.5 0 1 0 1.9-4.6"/><path d="M3.5 3v3.5H7"/>
+            </svg>
+            Buka Ulang
+          </button>
+        </form>
+      {% else %}
+        <button type="button" class="btn btn--primary" data-modal-open="close-modal">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="10" cy="10" r="7.5"/><path d="m6.6 10.2 2.3 2.3 4.5-4.9"/>
+          </svg>
+          Tutup Tiket
+        </button>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
+
+{% block content %}
+<div class="ticket-layout">
+
+  {# ── Percakapan ────────────────────────────────────────────────────── #}
+  <div class="stack">
+    <div class="card">
+      <div class="card__header">
+        <div class="card__title">Percakapan</div>
+        <div class="card__subtitle">{{ replies|length }} balasan</div>
+        <div class="card__actions">
+          <span class="badge badge--neutral">{{ ticket.get_source_display }}</span>
+        </div>
+      </div>
+
+      <ul class="conv">
+        {# Pesan pembuka: deskripsi dari pelapor #}
+        <li class="conv__item">
+          <span class="avatar avatar--lg {{ ticket.requester_name|avatar_color }}">
+            {{ ticket.requester_name|initials }}
+          </span>
+          <div class="conv__body">
+            <div class="conv__head">
+              <span class="conv__author">{{ ticket.requester_name }}</span>
+              <span class="badge badge--neutral">Pelapor</span>
+              <span class="conv__time">{{ ticket.opened_at|date:"d/m/Y H:i" }}</span>
+            </div>
+            <div class="conv__text">{{ ticket.description|default:"(Tidak ada deskripsi)" }}</div>
+            {% if ticket.tag_list %}
+              <div class="row row--wrap mt-2" style="gap:5px">
+                {% for tag in ticket.tag_list %}
+                  <span class="badge badge--neutral">#{{ tag }}</span>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        </li>
+
+        {% for reply in replies %}
+          <li class="conv__item {% if reply.is_private %}conv__item--private{% endif %}">
+            <span class="avatar avatar--lg {{ reply.author_label|avatar_color }}">
+              {{ reply.initials }}
+            </span>
+            <div class="conv__body">
+              <div class="conv__head">
+                <span class="conv__author">{{ reply.author_label }}</span>
+                {% if reply.is_private %}
+                  <span class="badge badge--warn">
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"
+                         width="10" height="10" aria-hidden="true">
+                      <rect x="5" y="9" width="10" height="7" rx="1.5"/>
+                      <path d="M7.5 9V6.8a2.5 2.5 0 0 1 5 0V9"/>
+                    </svg>
+                    Catatan internal
+                  </span>
+                {% else %}
+                  <span class="badge badge--teal">Agent</span>
+                {% endif %}
+                <span class="conv__time">{{ reply.created_at|date:"d/m/Y H:i" }}</span>
+              </div>
+              <div class="conv__text">{{ reply.body }}</div>
+            </div>
+          </li>
+        {% endfor %}
+
+        {% if ticket.is_closed and ticket.close_reason %}
+          <li class="conv__item" style="background:var(--ok-bg)">
+            <span class="avatar avatar--lg" style="background:var(--ok)">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" width="18" height="18"
+                   aria-hidden="true"><path d="m5 10.4 3.2 3.2L15 6.6"/></svg>
+            </span>
+            <div class="conv__body">
+              <div class="conv__head">
+                <span class="conv__author">Tiket ditutup</span>
+                <span class="conv__time">{{ ticket.closed_at|date:"d/m/Y H:i" }}</span>
+              </div>
+              <div class="conv__text">{{ ticket.close_reason }}</div>
+              <div class="text-xs muted mt-2">
+                Total durasi penanganan: <strong>{{ ticket.duration_display }}</strong>
+              </div>
+            </div>
+          </li>
+        {% endif %}
+      </ul>
+
+      {# ── Kotak balasan ──────────────────────────────────────────────── #}
+      <div class="replybox">
+        <form method="post" action="{% url 'tickets:reply' ticket.number %}" data-guard>
+          {% csrf_token %}
+
+          <div class="replybox__tabs segmented">
+            <span class="segmented__item">
+              <input type="radio" name="is_private" value="" id="reply-public" checked>
+              <label class="segmented__label" for="reply-public">Balas pelapor</label>
+            </span>
+            <span class="segmented__item">
+              <input type="radio" name="is_private" value="on" id="reply-private">
+              <label class="segmented__label" for="reply-private">Catatan internal</label>
+            </span>
+          </div>
+
+          <label for="{{ reply_form.body.id_for_label }}" class="sr-only">Balasan</label>
+          {{ reply_form.body }}
+
+          <div class="row mt-2">
+            <span class="text-xs muted">
+              Membalas tiket Open otomatis mengubah statusnya menjadi Outstanding.
+            </span>
+            <span class="spacer"></span>
+            <button type="submit" class="btn btn--primary">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M17 3 9 11M17 3l-5.2 14-2.6-6-6-2.6L17 3Z"/>
+              </svg>
+              Kirim
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {# Riwayat perubahan #}
+    <div class="card">
+      <div class="card__header">
+        <div class="card__title">Riwayat Perubahan</div>
+        <div class="card__subtitle">Jejak audit tiket ini</div>
+      </div>
+      <div class="card__body">
+        <ul class="timeline">
+          {% for log in history %}
+            <li>
+              <span class="timeline__dot {% if log.verb == 'ticket_close' %}timeline__dot--ok{% elif log.verb == 'ticket_create' %}timeline__dot--info{% elif log.verb == 'ticket_reopen' %}timeline__dot--warn{% endif %}"></span>
+              <div class="timeline__title">
+                {{ log.actor_label }} — {{ log.get_verb_display|lower }}
+              </div>
+              <div class="timeline__time">{{ log.created_at|date:"d/m/Y H:i" }}</div>
+              {% if log.reason %}
+                <div class="timeline__note">{{ log.reason }}</div>
+              {% endif %}
+            </li>
+          {% empty %}
+            <li>
+              <span class="timeline__dot"></span>
+              <div class="timeline__title muted">Belum ada perubahan tercatat.</div>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  {# ── Panel properti ────────────────────────────────────────────────── #}
+  <aside class="stack">
+    <div class="card">
+      <div class="card__header">
+        <div class="card__title">Properti</div>
+      </div>
+      <div class="card__body">
+        <form method="post" action="{% url 'tickets:properties' ticket.number %}" class="props">
+          {% csrf_token %}
+
+          <div class="props__field">
+            <label class="props__label" for="p-status">Status</label>
+            <select name="status" id="p-status" class="form-select">
+              {% for value, label in statuses %}
+                <option value="{{ value }}" {% if ticket.status == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="props__field">
+            <label class="props__label" for="p-priority">Prioritas</label>
+            <select name="priority" id="p-priority" class="form-select">
+              {% for value, label in priorities %}
+                <option value="{{ value }}" {% if ticket.priority == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="props__field">
+            <label class="props__label" for="p-type">Tipe</label>
+            <select name="ticket_type" id="p-type" class="form-select">
+              {% for value, label in types %}
+                <option value="{{ value }}" {% if ticket.ticket_type == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            <div class="form-help">
+              Nomor tiket tidak ikut berubah setelah tiket dibuat.
+            </div>
+          </div>
+
+          <div class="props__field">
+            <label class="props__label" for="p-assignee">Person In Charge</label>
+            <select name="assignee" id="p-assignee" class="form-select">
+              <option value="">— Belum ditugaskan —</option>
+              {% for agent in agents %}
+                <option value="{{ agent.id }}" {% if ticket.assignee_id == agent.id %}selected{% endif %}>
+                  {{ agent.display_name }}{% if agent.position %} · {{ agent.position }}{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="props__field">
+            <label class="props__label" for="p-group">Grup</label>
+            <select name="group" id="p-group" class="form-select">
+              <option value="">— Tanpa grup —</option>
+              {% for value, label in groups %}
+                <option value="{{ value }}" {% if ticket.group == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn--primary btn--block">Simpan Perubahan</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__header">
+        <div class="card__title">Informasi</div>
+      </div>
+      <div class="card__body">
+        <div class="meta-list">
+          <div class="meta-list__row">
+            <span class="meta-list__key">Pelapor</span>
+            <span class="meta-list__val">{{ ticket.requester_name }}</span>
+          </div>
+          {% if ticket.requester_email %}
+            <div class="meta-list__row">
+              <span class="meta-list__key">Email</span>
+              <span class="meta-list__val truncate">{{ ticket.requester_email }}</span>
+            </div>
+          {% endif %}
+          {% if ticket.company %}
+            <div class="meta-list__row">
+              <span class="meta-list__key">Unit</span>
+              <span class="meta-list__val">{{ ticket.company }}</span>
+            </div>
+          {% endif %}
+          {% if ticket.site_code %}
+            <div class="meta-list__row">
+              <span class="meta-list__key">Kode site</span>
+              <span class="meta-list__val"><span class="site-code">{{ ticket.site_code }}</span></span>
+            </div>
+          {% endif %}
+          <div class="meta-list__row">
+            <span class="meta-list__key">Sumber</span>
+            <span class="meta-list__val">{{ ticket.get_source_display }}</span>
+          </div>
+          <div class="meta-list__row">
+            <span class="meta-list__key">Waktu open</span>
+            <span class="meta-list__val">{{ ticket.opened_at|date:"d/m/Y H:i" }}</span>
+          </div>
+          <div class="meta-list__row">
+            <span class="meta-list__key">Target selesai</span>
+            <span class="meta-list__val">
+              {% if ticket.due_at %}{{ ticket.due_at|date:"d/m/Y H:i" }}{% else %}—{% endif %}
+            </span>
+          </div>
+          <div class="meta-list__row">
+            <span class="meta-list__key">Waktu close</span>
+            <span class="meta-list__val">
+              {% if ticket.closed_at %}{{ ticket.closed_at|date:"d/m/Y H:i" }}{% else %}—{% endif %}
+            </span>
+          </div>
+          <div class="meta-list__row">
+            <span class="meta-list__key">Durasi</span>
+            <span class="meta-list__val">{{ ticket.duration_display }}</span>
+          </div>
+          <div class="meta-list__row">
+            <span class="meta-list__key">Dibuat oleh</span>
+            <span class="meta-list__val">
+              {% if ticket.created_by %}{{ ticket.created_by.display_name }}{% else %}Sistem{% endif %}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if related %}
+      <div class="card">
+        <div class="card__header">
+          <div class="card__title">Tiket Site Sama</div>
+          <div class="card__subtitle">{{ ticket.site_code }}</div>
+        </div>
+        <div class="card__body card__body--flush">
+          <ul class="mini-list">
+            {% for other in related %}
+              <li>
+                <a href="{{ other.get_absolute_url }}">
+                  <span class="mini-list__text">
+                    <span class="mini-list__title">{{ other.subject }}</span>
+                    <span class="mini-list__meta">{{ other.number }} · {{ other.opened_at|relative_time }}</span>
+                  </span>
+                  <span class="badge {{ other.status_badge }}">{{ other.get_status_display }}</span>
+                </a>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card__body">
+        <a href="{% url 'solutions:browse' %}?q={{ ticket.subject|urlencode }}"
+           class="btn btn--secondary btn--block">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="9" cy="9" r="5.5"/><path d="m13.2 13.2 3.3 3.3"/>
+          </svg>
+          Cari solusi terkait
+        </a>
+        <a href="{% url 'solutions:create' %}?dari={{ ticket.number }}"
+           class="btn btn--ghost btn--block mt-1">
+          Jadikan artikel solusi
+        </a>
+      </div>
+    </div>
+  </aside>
+</div>
+
+{# ── Modal tutup tiket ───────────────────────────────────────────────── #}
+<div class="modal" id="close-modal" hidden>
+  <div class="modal__box" role="dialog" aria-modal="true" aria-labelledby="close-modal-title">
+    <form method="post" action="{% url 'tickets:close' ticket.number %}" data-guard>
+      {% csrf_token %}
+
+      <div class="modal__head">
+        <h2 id="close-modal-title">Tutup Tiket {{ ticket.number }}</h2>
+        <button type="button" class="modal__close" data-modal-close aria-label="Tutup">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" aria-hidden="true"><path d="m5.5 5.5 9 9M14.5 5.5l-9 9"/></svg>
+        </button>
+      </div>
+
+      <div class="modal__body">
+        <p class="text-sm muted mb-2">
+          Alasan penutupan tercatat pada audit trail dan ikut terbawa ke laporan Excel.
+        </p>
+
+        <div class="form-row">
+          <label class="form-label" for="{{ close_form.reason_category.id_for_label }}">
+            {{ close_form.reason_category.label }}<span class="req">*</span>
+          </label>
+          {{ close_form.reason_category }}
+        </div>
+
+        <div class="form-row">
+          <label class="form-label" for="{{ close_form.reason.id_for_label }}">
+            {{ close_form.reason.label }}<span class="req">*</span>
+          </label>
+          {{ close_form.reason }}
+        </div>
+
+        <label class="check">
+          {{ close_form.create_article }}
+          {{ close_form.create_article.label }}
+        </label>
+        <div class="form-help">{{ close_form.create_article.help_text }}</div>
+      </div>
+
+      <div class="modal__foot">
+        <button type="button" class="btn btn--secondary" data-modal-close>Batal</button>
+        <button type="submit" class="btn btn--primary">Tutup Tiket</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

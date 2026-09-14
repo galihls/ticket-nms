@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+{% load ui humanize %}
+
+{% block page_desc %}
+  <p class="page-header__desc">
+    Ringkasan operasional tiket {{ COMPANY_SHORT }} — semua angka mengikuti periode yang dipilih.
+  </p>
+{% endblock %}
+
+{% block page_actions %}
+  <a href="{% url 'tickets:list' %}" class="btn btn--secondary">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M3 5.5h14M3 10h14M3 14.5h9"/>
+    </svg>
+    Semua Tiket
+  </a>
+  <a href="{% url 'tickets:create' %}" class="btn btn--primary">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9"
+         stroke-linecap="round" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11"/></svg>
+    Create New Ticket
+  </a>
+{% endblock %}
+
+{% block content %}
+
+  {% include "partials/_filterbar.html" %}
+
+  {# ── Total angka per status ─────────────────────────────────────────── #}
+  <div class="grid grid--4 mb-3">
+    <div class="stat">
+      <div class="stat__label">Total Tiket</div>
+      <div class="stat__value">{{ counts.total|intcomma }}</div>
+      <div class="stat__meta">
+        {% if delta_percent is not None %}
+          <span class="stat__delta {% if delta > 0 %}stat__delta--up{% elif delta < 0 %}stat__delta--down{% endif %}">
+            {% if delta > 0 %}+{% endif %}{{ delta_percent }}%
+          </span>
+          dari periode sebelumnya ({{ prev_total }})
+        {% else %}
+          <span class="muted">Tidak ada data pembanding</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <a href="{% url 'tickets:list' %}?status=open" class="stat stat--open">
+      <div class="stat__label">Open</div>
+      <div class="stat__value">{{ counts.open|intcomma }}</div>
+      <div class="stat__meta">Belum ditangani</div>
+    </a>
+
+    <a href="{% url 'tickets:list' %}?status=outstanding" class="stat stat--outstanding">
+      <div class="stat__label">Outstanding</div>
+      <div class="stat__value">{{ counts.outstanding|intcomma }}</div>
+      <div class="stat__meta">Sedang ditangani</div>
+    </a>
+
+    <a href="{% url 'tickets:list' %}?status=closed" class="stat stat--closed">
+      <div class="stat__label">Close</div>
+      <div class="stat__value">{{ counts.closed|intcomma }}</div>
+      <div class="stat__meta">Selesai ditangani</div>
+    </a>
+  </div>
+
+  {# ── Pie chart + aksi cepat ─────────────────────────────────────────── #}
+  <div class="grid grid--2 mb-3" style="grid-template-columns: minmax(0,1.15fr) minmax(0,1fr)">
+
+    <div class="card">
+      <div class="card__header">
+        <div>
+          <div class="card__title">Persentase Status Tiket</div>
+          <div class="card__subtitle">{{ range.label }}</div>
+        </div>
+        <div class="card__actions">
+          <a href="{% url 'tickets:list' %}" class="btn btn--ghost btn--sm">Rincian</a>
+        </div>
+      </div>
+      <div class="card__body">
+        {% include "partials/_donut.html" %}
+      </div>
+      <div class="card__footer">
+        <span>Problem <strong>{{ type_counts.problem }}</strong></span>
+        <span class="muted">·</span>
+        <span>Feature Request <strong>{{ type_counts.feature }}</strong></span>
+        <span class="spacer"></span>
+        <span class="muted">Penomoran {% now "y" %}PR#### / {% now "y" %}FR####</span>
+      </div>
+    </div>
+
+    <div class="stack">
+      {# Quick action: agent dapat langsung membuat tiket dari dashboard #}
+      <div class="card">
+        <div class="card__header">
+          <div class="card__title">Aksi Cepat</div>
+        </div>
+        <div class="card__body">
+          <div class="grid grid--2" style="gap:10px">
+            <a href="{% url 'tickets:create' %}?type=PR" class="btn btn--primary btn--lg">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M10 2.8 2.8 16.2h14.4L10 2.8Z"/><path d="M10 8v3.4M10 13.6h.01"/>
+              </svg>
+              Tiket Problem
+            </a>
+            <a href="{% url 'tickets:create' %}?type=FR" class="btn btn--accent btn--lg">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M10 2.5v1.8M4.6 4.6l1.3 1.3M2.5 10h1.8M15.7 5.9l1.3-1.3M15.7 10h1.8"/>
+                <path d="M7.8 15.5h4.4M8.4 17.5h3.2"/>
+                <path d="M10 6.5a3.5 3.5 0 0 1 2.1 6.3v.7H7.9v-.7A3.5 3.5 0 0 1 10 6.5Z"/>
+              </svg>
+              Feature Request
+            </a>
+          </div>
+
+          <hr class="divider">
+
+          <div class="grid grid--2" style="gap:8px">
+            <a href="{% url 'tickets:list' %}?assignee=me" class="btn btn--secondary btn--sm">
+              Tiket saya
+            </a>
+            <a href="{% url 'tickets:list' %}?assignee=none" class="btn btn--secondary btn--sm">
+              Belum ditugaskan
+            </a>
+            <a href="{% url 'solutions:home' %}" class="btn btn--secondary btn--sm">
+              Cari solusi
+            </a>
+            {% if is_admin %}
+              <a href="{% url 'reports:export' %}" class="btn btn--secondary btn--sm">
+                Export laporan
+              </a>
+            {% else %}
+              <a href="{% url 'solutions:create' %}" class="btn btn--secondary btn--sm">
+                Tulis solusi
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {# Perlu perhatian: prioritas tinggi yang belum selesai #}
+      <div class="card">
+        <div class="card__header">
+          <div class="card__title">Perlu Perhatian</div>
+          <div class="card__actions">
+            <a href="{% url 'tickets:list' %}?priority=urgent&priority=high&status=open&status=outstanding"
+               class="btn btn--ghost btn--sm">Lihat semua</a>
+          </div>
+        </div>
+        <div class="card__body card__body--flush">
+          <ul class="mini-list">
+            {% for ticket in urgent_tickets %}
+              <li>
+                <a href="{{ ticket.get_absolute_url }}">
+                  <span class="badge {{ ticket.priority_badge }}">
+                    <span class="badge__dot"></span>{{ ticket.get_priority_display }}
+                  </span>
+                  <span class="mini-list__text">
+                    <span class="mini-list__title">{{ ticket.subject }}</span>
+                    <span class="mini-list__meta">
+                      {{ ticket.number }} ·
+                      {% if ticket.assignee %}{{ ticket.assignee.display_name }}{% else %}Belum ditugaskan{% endif %}
+                      · {{ ticket.opened_at|relative_time }}
+                    </span>
+                  </span>
+                </a>
+              </li>
+            {% empty %}
+              <li>
+                <div class="empty" style="padding:28px 16px">
+                  <div class="empty__desc mb-0">
+                    Tidak ada tiket prioritas tinggi yang terbuka pada periode ini.
+                  </div>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Agent performance: progres tiket per agent ─────────────────────── #}
+  <div class="card mb-3">
+    <div class="card__header">
+      <div>
+        <div class="card__title">Agent Performance</div>
+        <div class="card__subtitle">Progres tiket per agent, dari open hingga close</div>
+      </div>
+      <div class="card__actions">
+        <form method="get" class="row" style="gap:6px">
+          {% for key, value in request.GET.items %}
+            {% if key != "sort" and key != "page" %}
+              <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% endif %}
+          {% endfor %}
+          <label for="agent-sort" class="sr-only">Urutkan agent</label>
+          <select name="sort" id="agent-sort" class="form-select" style="height:30px;padding:2px 30px 2px 10px;font-size:12.5px;width:auto"
+                  onchange="this.form.submit()">
+            {% for value, label in agent_sorts %}
+              <option value="{{ value }}" {% if sort == value %}selected{% endif %}>
+                Urutkan: {{ label }}
+              </option>
+            {% endfor %}
+          </select>
+          <noscript><button type="submit" class="btn btn--secondary btn--sm">Urutkan</button></noscript>
+        </form>
+      </div>
+    </div>
+
+    <div class="card__body card__body--flush">
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width:26%">Agent</th>
+              <th style="width:28%">Progres</th>
+              <th class="num">Open</th>
+              <th class="num">Outstanding</th>
+              <th class="num">Close</th>
+              <th class="num">Total</th>
+              <th class="num">Rasio Selesai</th>
+              <th class="col-actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for agent in agents %}
+              <tr>
+                <td>
+                  <span class="row" style="gap:9px">
+                    <span class="avatar avatar--sm {{ agent.name|avatar_color }}">{{ agent.initials }}</span>
+                    <span>
+                      <span class="strong" style="display:block;color:var(--ink-900)">{{ agent.name }}</span>
+                      <span class="text-xs muted">{{ agent.position }}</span>
+                    </span>
+                  </span>
+                </td>
+                <td>
+                  <div class="mini-bar" role="img"
+                       aria-label="{{ agent.open }} open, {{ agent.outstanding }} outstanding, {{ agent.closed }} close">
+                    {% for part in agent.bar %}
+                      {% if part.value %}
+                        <span class="mini-bar__part" style="width:{{ part.width }}%;background:{{ part.color }}">
+                          <span class="sr-only">{{ part.label }} {{ part.value }}</span>
+                        </span>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                </td>
+                <td class="num">{{ agent.open }}</td>
+                <td class="num">{{ agent.outstanding }}</td>
+                <td class="num">{{ agent.closed }}</td>
+                <td class="num strong">{{ agent.total }}</td>
+                <td class="num">
+                  <span class="badge {% if agent.rate >= 80 %}badge--ok{% elif agent.rate >= 50 %}badge--warn{% else %}badge--neutral{% endif %}">
+                    {{ agent.rate }}%
+                  </span>
+                </td>
+                <td class="col-actions">
+                  <a href="{% url 'tickets:list' %}?assignee={{ agent.id }}"
+                     class="btn btn--ghost btn--sm">Lihat tiket</a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="8">
+                  <div class="empty">
+                    <div class="empty__title">Belum ada tiket pada periode ini</div>
+                    <div class="empty__desc">Ubah rentang tanggal di atas, atau buat tiket baru.</div>
+                    <a href="{% url 'tickets:create' %}" class="btn btn--primary">Buat Tiket</a>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card__footer">
+      <span class="row" style="gap:6px">
+        <span class="chart-legend__dot" style="background:#175CD3"></span> Open
+      </span>
+      <span class="row" style="gap:6px">
+        <span class="chart-legend__dot" style="background:#DC6803"></span> Outstanding
+      </span>
+      <span class="row" style="gap:6px">
+        <span class="chart-legend__dot" style="background:#067647"></span> Close
+      </span>
+      <span class="spacer"></span>
+      <span>{{ agents|length }} agent aktif pada periode ini</span>
+    </div>
+  </div>
+
+  {# ── Tiket terbaru + log aktivitas ──────────────────────────────────── #}
+  <div class="grid grid--2">
+
+    <div class="card">
+      <div class="card__header">
+        <div class="card__title">Tiket Terbaru</div>
+        <div class="card__actions">
+          <a href="{% url 'tickets:list' %}" class="btn btn--ghost btn--sm">Lihat semua</a>
+        </div>
+      </div>
+      <div class="card__body card__body--flush">
+        <ul class="mini-list">
+          {% for ticket in recent_tickets %}
+            <li>
+              <a href="{{ ticket.get_absolute_url }}">
+                <span class="avatar avatar--sm {{ ticket.requester_name|avatar_color }}">
+                  {{ ticket.requester_name|initials }}
+                </span>
+                <span class="mini-list__text">
+                  <span class="mini-list__title">{{ ticket.subject }}</span>
+                  <span class="mini-list__meta">
+                    <span class="ticket-no">{{ ticket.number }}</span> ·
+                    {{ ticket.requester_name }} · {{ ticket.opened_at|relative_time }}
+                  </span>
+                </span>
+                <span class="badge {{ ticket.status_badge }}">{{ ticket.get_status_display }}</span>
+              </a>
+            </li>
+          {% empty %}
+            <li>
+              <div class="empty" style="padding:32px 16px">
+                <div class="empty__desc mb-0">Belum ada tiket pada periode ini.</div>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    {# Log Event / Audit Trail — hanya untuk admin, sesuai requirement #}
+    {% if is_admin %}
+      <div class="card">
+        <div class="card__header">
+          <div>
+            <div class="card__title">Log Aktivitas Agent</div>
+            <div class="card__subtitle">Audit trail — akses administrator</div>
+          </div>
+          <div class="card__actions">
+            <a href="{% url 'core:activity_log' %}" class="btn btn--ghost btn--sm">Lihat semua</a>
+          </div>
+        </div>
+        <div class="card__body card__body--flush">
+          <ul class="mini-list">
+            {% for log in activities %}
+              <li>
+                <div class="mini-list__item">
+                  <span class="avatar avatar--sm {{ log.actor_label|avatar_color }}">
+                    {{ log.actor_label|initials }}
+                  </span>
+                  <span class="mini-list__text">
+                    <span class="mini-list__title" style="white-space:normal">
+                      <span class="strong">{{ log.actor_label }}</span>
+                      <span class="muted">{{ log.get_verb_display|lower }}</span>
+                      {% if log.url %}
+                        <a href="{{ log.url }}" class="ticket-no">{{ log.target_label }}</a>
+                      {% else %}
+                        <span class="ticket-no">{{ log.target_label }}</span>
+                      {% endif %}
+                    </span>
+                    <span class="mini-list__meta">
+                      {{ log.subject|truncatechars:52 }}
+                      {% if log.status %} · Status: {{ log.status }}{% endif %}
+                      {% if log.pic %} · PIC: {{ log.pic }}{% endif %}
+                    </span>
+                  </span>
+                  <span class="text-xs muted nowrap">{{ log.created_at|relative_time }}</span>
+                </div>
+              </li>
+            {% empty %}
+              <li>
+                <div class="empty" style="padding:32px 16px">
+                  <div class="empty__desc mb-0">Belum ada aktivitas tercatat.</div>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    {% else %}
+      <div class="card">
+        <div class="card__header">
+          <div class="card__title">Solusi Paling Dilihat</div>
+          <div class="card__actions">
+            <a href="{% url 'solutions:home' %}" class="btn btn--ghost btn--sm">Buka Solutions</a>
+          </div>
+        </div>
+        <div class="card__body card__body--flush">
+          <ul class="mini-list">
+            {% for article in top_articles %}
+              <li>
+                <a href="{{ article.get_absolute_url }}">
+                  <span class="mini-list__text">
+                    <span class="mini-list__title">{{ article.title }}</span>
+                    <span class="mini-list__meta">
+                      {{ article.folder.name }} · {{ article.views }} kali dilihat
+                    </span>
+                  </span>
+                  <span class="badge {{ article.category_badge }}">{{ article.category_label }}</span>
+                </a>
+              </li>
+            {% empty %}
+              <li>
+                <div class="empty" style="padding:32px 16px">
+                  <div class="empty__desc mb-0">Belum ada artikel solusi.</div>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+{% endblock %}

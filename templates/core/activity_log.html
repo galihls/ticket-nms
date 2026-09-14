@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% load ui %}
+
+{% block page_desc %}
+  <p class="page-header__desc">
+    Jejak seluruh aktivitas agent — siapa melakukan apa, kapan, dan pada tiket mana.
+  </p>
+{% endblock %}
+
+{% block content %}
+
+<div class="filterbar">
+  <form method="get" class="row row--wrap" style="gap:8px;width:100%">
+    <label for="log-q" class="sr-only">Cari</label>
+    <input type="search" name="q" id="log-q" value="{{ q }}" class="form-input"
+           placeholder="Cari subjek, agent, atau nomor tiket…"
+           style="height:30px;width:280px;font-size:13px">
+
+    <label for="log-verb" class="sr-only">Jenis aksi</label>
+    <select name="verb" id="log-verb" class="form-select"
+            style="height:30px;padding:2px 30px 2px 10px;font-size:12.5px;width:auto">
+      <option value="">Semua aksi</option>
+      {% for value, label in verbs %}
+        <option value="{{ value }}" {% if selected_verb == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="log-actor" class="sr-only">Agent</label>
+    <select name="actor" id="log-actor" class="form-select"
+            style="height:30px;padding:2px 30px 2px 10px;font-size:12.5px;width:auto">
+      <option value="">Semua agent</option>
+      {% for agent in actors %}
+        <option value="{{ agent.id }}" {% if selected_actor == agent.id|stringformat:"s" %}selected{% endif %}>
+          {{ agent.display_name }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <button type="submit" class="btn btn--primary btn--sm">Terapkan</button>
+    <a href="{% url 'core:activity_log' %}" class="btn btn--secondary btn--sm">Reset</a>
+
+    <span class="filterbar__spacer"></span>
+    <span class="filterbar__range">
+      <strong>{{ page_obj.paginator.count }}</strong> baris log
+    </span>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card__body card__body--flush">
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width:150px">Waktu</th>
+            <th style="width:190px">Agent</th>
+            <th style="width:170px">Aksi</th>
+            <th>Subjek</th>
+            <th style="width:120px">Status</th>
+            <th style="width:170px">Person In Charge</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in page_obj %}
+            <tr>
+              <td class="nowrap text-sm muted">{{ log.created_at|date:"d/m/Y H:i" }}</td>
+              <td>
+                <span class="row" style="gap:8px">
+                  <span class="avatar avatar--sm {{ log.actor_label|avatar_color }}">
+                    {{ log.actor_label|initials }}
+                  </span>
+                  <span class="truncate">{{ log.actor_label|default:"Sistem" }}</span>
+                </span>
+              </td>
+              <td>
+                <span class="badge {{ log.badge_class }}">{{ log.get_verb_display }}</span>
+              </td>
+              <td>
+                {% if log.url %}
+                  <a href="{{ log.url }}" class="ticket-no">{{ log.target_label }}</a>
+                {% else %}
+                  <span class="ticket-no">{{ log.target_label }}</span>
+                {% endif %}
+                <span class="muted">·</span>
+                {{ log.subject|truncatechars:70 }}
+                {% if log.reason %}
+                  <div class="text-xs muted mt-1" style="line-height:1.5">
+                    {{ log.reason|truncatechars:120 }}
+                  </div>
+                {% endif %}
+              </td>
+              <td>
+                {% if log.status %}<span class="badge badge--neutral">{{ log.status }}</span>{% else %}—{% endif %}
+              </td>
+              <td class="text-sm">{{ log.pic|default:"—" }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6">
+                <div class="empty">
+                  <div class="empty__title">Tidak ada log yang cocok</div>
+                  <div class="empty__desc">Longgarkan filter di atas untuk melihat lebih banyak.</div>
+                  <a href="{% url 'core:activity_log' %}" class="btn btn--secondary">Reset filter</a>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if page_obj.paginator.count %}
+    <div class="card__footer">
+      {% include "partials/_pagination.html" %}
+    </div>
+  {% endif %}
+</div>
+
+{% endblock %}

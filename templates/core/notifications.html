@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load ui %}
+
+{% block page_desc %}
+  <p class="page-header__desc">
+    Notifikasi seluruh tiket dari semua agent.
+  </p>
+{% endblock %}
+
+{% block page_actions %}
+  {% if nav_unread_count %}
+    <form method="post" action="{% url 'core:notifications_read' %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <button type="submit" class="btn btn--secondary">Tandai semua dibaca</button>
+    </form>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+
+<div class="tabs">
+  <a href="{% url 'core:notifications' %}" class="tab {% if filter != 'unread' %}is-active{% endif %}">
+    Semua
+  </a>
+  <a href="?filter=unread" class="tab {% if filter == 'unread' %}is-active{% endif %}">
+    Belum dibaca
+    {% if nav_unread_count %}<span class="badge badge--danger">{{ nav_unread_count }}</span>{% endif %}
+  </a>
+</div>
+
+<div class="card">
+  <div class="card__body card__body--flush">
+    {% for note in page_obj %}
+      <a href="{{ note.url|default:'#' }}" class="notif {% if not note.is_read %}is-unread{% endif %}">
+        <span class="notif__dot" style="background:{{ note.dot_color }}"></span>
+        <span class="mini-list__text">
+          <span class="notif__title">{{ note.title }}</span>
+          <span class="notif__body">{{ note.body }}</span>
+          <span class="notif__time">
+            {{ note.created_at|date:"d/m/Y H:i" }}
+            {% if note.actor %} · {{ note.actor.display_name }}{% endif %}
+          </span>
+        </span>
+        {% if not note.is_read %}
+          <span class="badge badge--info" style="align-self:center">Baru</span>
+        {% endif %}
+      </a>
+    {% empty %}
+      <div class="empty">
+        <svg class="empty__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3a5.5 5.5 0 0 0-5.5 5.5c0 5-2 6.5-2 6.5h15s-2-1.5-2-6.5A5.5 5.5 0 0 0 12 3Z"/>
+          <path d="M13.8 18.5a2 2 0 0 1-3.6 0"/>
+        </svg>
+        <div class="empty__title">Tidak ada notifikasi</div>
+        <div class="empty__desc">
+          {% if filter == "unread" %}
+            Semua notifikasi sudah dibaca.
+          {% else %}
+            Notifikasi muncul saat ada tiket baru atau tiket yang ditutup.
+          {% endif %}
+        </div>
+        <a href="{% url 'tickets:list' %}" class="btn btn--secondary">Buka daftar tiket</a>
+      </div>
+    {% endfor %}
+  </div>
+
+  {% if page_obj.paginator.count %}
+    <div class="card__footer">
+      {% include "partials/_pagination.html" %}
+    </div>
+  {% endif %}
+</div>
+
+{% endblock %}

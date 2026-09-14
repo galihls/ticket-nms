@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block page_desc %}
+  <p class="page-header__desc">
+    Tulis solusi berdasarkan isu yang sudah berhasil Anda tangani, supaya agent
+    lain tidak mulai dari nol.
+  </p>
+{% endblock %}
+
+{% block page_actions %}
+  <a href="{% if is_edit %}{{ article.get_absolute_url }}{% else %}{% url 'solutions:home' %}{% endif %}"
+     class="btn btn--secondary">Batal</a>
+{% endblock %}
+
+{% block content %}
+<form method="post" novalidate data-guard>
+  {% csrf_token %}
+
+  <div class="grid" style="grid-template-columns: minmax(0,1fr) 300px; align-items:start">
+
+    <div class="stack">
+      {% if form.errors %}
+        <div class="alert alert--error">
+          <div class="alert__body">
+            <div class="alert__title">Ada isian yang perlu diperbaiki</div>
+            Periksa kembali kolom yang ditandai merah.
+          </div>
+        </div>
+      {% endif %}
+
+      {% if source_ticket %}
+        <div class="alert alert--info">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="10" cy="10" r="7.5"/><path d="M10 13.7V9.3"/><path d="M10 6.6h.01"/>
+          </svg>
+          <div class="alert__body">
+            <div class="alert__title">Dibuat dari tiket {{ source_ticket.number }}</div>
+            Judul dan isi sudah diisi awal dari tiket tersebut. Rapikan seperlunya
+            sebelum menyimpan.
+          </div>
+        </div>
+      {% endif %}
+
+      <div class="card">
+        <div class="card__header">
+          <div class="card__title">Isi Artikel</div>
+        </div>
+        <div class="card__body">
+          <div class="form-row {% if form.title.errors %}has-error{% endif %}">
+            <label class="form-label" for="{{ form.title.id_for_label }}">
+              {{ form.title.label }}<span class="req">*</span>
+            </label>
+            {{ form.title }}
+            {% for error in form.title.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
+          </div>
+
+          <div class="form-row">
+            <label class="form-label" for="{{ form.summary.id_for_label }}">
+              {{ form.summary.label }}
+            </label>
+            {{ form.summary }}
+            <div class="form-help">Muncul pada daftar artikel dan hasil pencarian.</div>
+          </div>
+
+          <div class="form-row {% if form.body.errors %}has-error{% endif %}">
+            <label class="form-label" for="{{ form.body.id_for_label }}">
+              {{ form.body.label }}<span class="req">*</span>
+            </label>
+            {{ form.body }}
+            {% for error in form.body.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
+            <div class="form-help">
+              Pisahkan paragraf dengan satu baris kosong. Baris pendek tanpa titik
+              ditampilkan sebagai sub-judul.
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label class="form-label" for="{{ form.tags.id_for_label }}">
+              {{ form.tags.label }}
+            </label>
+            {{ form.tags }}
+            <div class="form-help">{{ form.tags.help_text }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card__header">
+          <div class="card__title">Kerangka yang Disarankan</div>
+          <div class="card__subtitle">Bukan keharusan — hanya urutan yang terbukti mudah dibaca</div>
+        </div>
+        <div class="card__body">
+          <ol class="text-sm" style="margin:0;padding-left:20px;line-height:1.9;color:var(--ink-600)">
+            <li><span class="strong">Gejala</span> — apa yang terlihat oleh pelapor atau di monitoring.</li>
+            <li><span class="strong">Langkah pemeriksaan</span> — urutan mempersempit penyebab.</li>
+            <li><span class="strong">Solusi</span> — tindakan yang menyelesaikan masalah.</li>
+            <li><span class="strong">Catatan</span> — hal yang perlu dipantau setelahnya.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <aside class="stack">
+      <div class="card">
+        <div class="card__header">
+          <div class="card__title">Penempatan</div>
+        </div>
+        <div class="card__body">
+          <div class="props">
+            <div class="props__field">
+              <label class="props__label" for="{{ form.folder.id_for_label }}">
+                {{ form.folder.label }}<span class="req">*</span>
+              </label>
+              {{ form.folder }}
+              {% for error in form.folder.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
+              <div class="form-help">
+                Folder menentukan kategori artikel: Problem atau Feature Request.
+              </div>
+            </div>
+
+            <div class="props__field">
+              <label class="props__label" for="{{ form.status.id_for_label }}">
+                {{ form.status.label }}
+              </label>
+              {{ form.status }}
+              <div class="form-help">Draf hanya terlihat oleh administrator.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card__body">
+          <button type="submit" class="btn btn--primary btn--lg btn--block">
+            {% if is_edit %}Simpan Perubahan{% else %}Terbitkan Artikel{% endif %}
+          </button>
+          <a href="{% if is_edit %}{{ article.get_absolute_url }}{% else %}{% url 'solutions:home' %}{% endif %}"
+             class="btn btn--ghost btn--block mt-1">Batal</a>
+        </div>
+      </div>
+    </aside>
+  </div>
+</form>
+{% endblock %}

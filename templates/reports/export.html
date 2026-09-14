@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% load ui humanize %}
+
+{% block page_desc %}
+  <p class="page-header__desc">
+    Tarik laporan harian dan bulanan ke format <span class="mono">.xlsx</span>.
+    Akses terbatas untuk administrator.
+  </p>
+{% endblock %}
+
+{% block page_actions %}
+  <a href="{% url 'reports:download' %}?{% qs %}" class="btn btn--primary">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M10 3v9M6.5 8.8 10 12.3l3.5-3.5"/><path d="M3.5 13.5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2"/>
+    </svg>
+    Download .xlsx
+  </a>
+{% endblock %}
+
+{% block content %}
+
+{# ── Pemilih periode ──────────────────────────────────────────────────── #}
+<div class="filterbar">
+  <span class="filterbar__label">Jenis laporan</span>
+  <div class="chips">
+    {% for value, label in period_choices %}
+      <a href="?{% qs period=value preset=None from=None to=None %}"
+         class="chip {% if period == value %}is-active{% endif %}">{{ label }}</a>
+    {% endfor %}
+  </div>
+
+  <span class="filterbar__spacer"></span>
+
+  <form method="get" class="row" style="gap:6px">
+    <input type="hidden" name="period" value="{{ period }}">
+    <label for="site-filter" class="sr-only">Filter kode site</label>
+    <input type="search" name="site" id="site-filter" value="{{ site }}" class="form-input"
+           placeholder="Filter kode site…" style="height:28px;width:180px;font-size:12.5px">
+    <button type="submit" class="btn btn--secondary btn--sm">Terapkan</button>
+  </form>
+</div>
+
+{% include "partials/_filterbar.html" %}
+
+{# ── Ringkasan yang akan diekspor ─────────────────────────────────────── #}
+<div class="grid grid--4 mb-3">
+  <div class="stat">
+    <div class="stat__label">Total Tiket</div>
+    <div class="stat__value">{{ counts.total|intcomma }}</div>
+    <div class="stat__meta">{{ range.days }} hari · {{ period_label }}</div>
+  </div>
+  <div class="stat stat--open">
+    <div class="stat__label">Open</div>
+    <div class="stat__value">{{ counts.open|intcomma }}</div>
+  </div>
+  <div class="stat stat--outstanding">
+    <div class="stat__label">Outstanding</div>
+    <div class="stat__value">{{ counts.outstanding|intcomma }}</div>
+  </div>
+  <div class="stat stat--closed">
+    <div class="stat__label">Close</div>
+    <div class="stat__value">{{ counts.closed|intcomma }}</div>
+  </div>
+</div>
+
+<div class="grid grid--2 mb-3" style="grid-template-columns: minmax(0,1.15fr) minmax(0,1fr)">
+  <div class="card">
+    <div class="card__header">
+      <div>
+        <div class="card__title">Sebaran Status</div>
+        <div class="card__subtitle">Sheet "Rekap" pada berkas Excel</div>
+      </div>
+    </div>
+    <div class="card__body">
+      {% include "partials/_donut.html" %}
+    </div>
+    <div class="card__footer">
+      <span>Problem <strong>{{ type_counts.problem }}</strong></span>
+      <span class="muted">·</span>
+      <span>Feature Request <strong>{{ type_counts.feature }}</strong></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__header">
+      <div>
+        <div class="card__title">Isi Berkas Excel</div>
+        <div class="card__subtitle">Mengacu pada Report Monitoring INITECH 2026</div>
+      </div>
+    </div>
+    <div class="card__body card__body--flush">
+      <ul class="mini-list">
+        {% for name, description in sheets %}
+          <li>
+            <div class="mini-list__item">
+              <span class="kb-folder__icon" style="background:var(--ok-bg);color:var(--ok)">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="3" width="14" height="14" rx="1.5"/>
+                  <path d="M3 7.5h14M7.5 7.5V17"/>
+                </svg>
+              </span>
+              <span class="mini-list__text">
+                <span class="mini-list__title">Sheet: {{ name }}</span>
+                <span class="mini-list__meta" style="white-space:normal">{{ description }}</span>
+              </span>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div class="card__footer">
+      <a href="{% url 'reports:download' %}?{% qs %}" class="btn btn--primary btn--sm">
+        Unduh sekarang
+      </a>
+      <span class="spacer"></span>
+      <span>{{ counts.total }} baris data akan ikut terekspor</span>
+    </div>
+  </div>
+</div>
+
+{# ── Pratinjau isi laporan ────────────────────────────────────────────── #}
+<div class="card mb-3">
+  <div class="card__header">
+    <div>
+      <div class="card__title">Pratinjau Detail Tiket</div>
+      <div class="card__subtitle">
+        12 baris pertama dari {{ counts.total }} — berkas berisi seluruhnya
+      </div>
+    </div>
+    <div class="card__actions">
+      <a href="{% url 'tickets:list' %}?{% qs %}" class="btn btn--ghost btn--sm">Buka di daftar tiket</a>
+    </div>
+  </div>
+  <div class="card__body card__body--flush">
+    <div class="table-wrap">
+      <table class="table table--compact table--striped">
+        <thead>
+          <tr>
+            <th>No. Tiket</th>
+            <th>Tipe</th>
+            <th>Subjek</th>
+            <th>Site</th>
+            <th>PIC</th>
+            <th>Status</th>
+            <th>Open</th>
+            <th>Close</th>
+            <th class="num">Durasi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ticket in preview %}
+            <tr>
+              <td><a href="{{ ticket.get_absolute_url }}" class="ticket-no">{{ ticket.number }}</a></td>
+              <td><span class="badge {{ ticket.type_badge }}">{{ ticket.get_ticket_type_display }}</span></td>
+              <td class="truncate" style="max-width:280px">{{ ticket.subject }}</td>
+              <td>{% if ticket.site_code %}<span class="site-code">{{ ticket.site_code }}</span>{% else %}—{% endif %}</td>
+              <td class="nowrap">{% if ticket.assignee %}{{ ticket.assignee.display_name }}{% else %}—{% endif %}</td>
+              <td><span class="badge {{ ticket.status_badge }}">{{ ticket.get_status_display }}</span></td>
+              <td class="nowrap text-sm">{{ ticket.opened_at|date:"d/m/y H:i" }}</td>
+              <td class="nowrap text-sm">
+                {% if ticket.closed_at %}{{ ticket.closed_at|date:"d/m/y H:i" }}{% else %}—{% endif %}
+              </td>
+              <td class="num nowrap">{{ ticket.duration_display }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="9">
+                <div class="empty">
+                  <div class="empty__title">Tidak ada tiket pada periode ini</div>
+                  <div class="empty__desc">Ubah rentang tanggal atau filter kode site di atas.</div>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid--2">
+  <div class="card">
+    <div class="card__header">
+      <div class="card__title">Performa Agent</div>
+      <div class="card__subtitle">Sheet "Performa Agent"</div>
+    </div>
+    <div class="card__body card__body--flush">
+      <div class="table-wrap">
+        <table class="table table--compact">
+          <thead>
+            <tr>
+              <th>Agent</th>
+              <th class="num">Open</th>
+              <th class="num">Outstanding</th>
+              <th class="num">Close</th>
+              <th class="num">Rasio</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for agent in agents %}
+              <tr>
+                <td>
+                  <span class="row" style="gap:8px">
+                    <span class="avatar avatar--sm {{ agent.name|avatar_color }}">{{ agent.initials }}</span>
+                    {{ agent.name }}
+                  </span>
+                </td>
+                <td class="num">{{ agent.open }}</td>
+                <td class="num">{{ agent.outstanding }}</td>
+                <td class="num">{{ agent.closed }}</td>
+                <td class="num">
+                  <span class="badge {% if agent.rate >= 80 %}badge--ok{% elif agent.rate >= 50 %}badge--warn{% else %}badge--neutral{% endif %}">
+                    {{ agent.rate }}%
+                  </span>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5"><div class="empty" style="padding:28px"><div class="empty__desc mb-0">Tidak ada data.</div></div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card__header">
+      <div class="card__title">Riwayat Ekspor</div>
+      <div class="card__subtitle">Laporan yang sudah pernah ditarik</div>
+    </div>
+    <div class="card__body card__body--flush">
+      <ul class="mini-list">
+        {% for item in history %}
+          <li>
+            <div class="mini-list__item">
+              <span class="mini-list__text">
+                <span class="mini-list__title">{{ item.file_name }}</span>
+                <span class="mini-list__meta">
+                  {{ item.get_period_display }} ·
+                  {{ item.date_from|date:"d/m/Y" }}–{{ item.date_to|date:"d/m/Y" }} ·
+                  {{ item.row_count }} baris
+                </span>
+              </span>
+              <span class="text-xs muted nowrap">
+                {% if item.created_by %}{{ item.created_by.display_name }}<br>{% endif %}
+                {{ item.created_at|relative_time }}
+              </span>
+            </div>
+          </li>
+        {% empty %}
+          <li>
+            <div class="empty" style="padding:36px 16px">
+              <div class="empty__desc mb-0">
+                Belum ada laporan yang diunduh. Klik <strong>Download .xlsx</strong> di atas.
+              </div>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

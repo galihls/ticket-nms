@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% load ui %}
+
+{% block page_desc %}
+  {% if q %}
+    <p class="page-header__desc">
+      {{ result_count }} hasil untuk "<span class="strong">{{ q }}</span>".
+    </p>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+
+<div class="card mb-3">
+  <div class="card__body">
+    <form method="get" class="row" style="gap:8px">
+      <label for="search-input" class="sr-only">Cari</label>
+      <input type="search" name="q" id="search-input" value="{{ q }}" class="form-input"
+             placeholder="Nomor tiket, subjek, kode site, atau judul solusi…" autofocus>
+      <button type="submit" class="btn btn--primary">Cari</button>
+    </form>
+  </div>
+</div>
+
+{% if not q %}
+  <div class="card">
+    <div class="empty">
+      <svg class="empty__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/>
+      </svg>
+      <div class="empty__title">Mulai mengetik untuk mencari</div>
+      <div class="empty__desc">
+        Pencarian mencakup nomor tiket, subjek, deskripsi, kode site, dan artikel solusi.
+      </div>
+    </div>
+  </div>
+
+{% elif not result_count %}
+  <div class="card">
+    <div class="empty">
+      <div class="empty__title">Tidak ada hasil untuk "{{ q }}"</div>
+      <div class="empty__desc">
+        Coba kata kunci yang lebih singkat, atau periksa ejaan nomor tiket.
+      </div>
+      <div class="row" style="justify-content:center">
+        <a href="{% url 'tickets:list' %}" class="btn btn--secondary">Lihat semua tiket</a>
+        <a href="{% url 'tickets:create' %}" class="btn btn--primary">Buat tiket baru</a>
+      </div>
+    </div>
+  </div>
+
+{% else %}
+  {% if tickets %}
+    <div class="card mb-3">
+      <div class="card__header">
+        <div class="card__title">Tiket</div>
+        <div class="card__subtitle">{{ tickets|length }} hasil</div>
+      </div>
+      <div class="card__body card__body--flush">
+        <ul class="tlist">
+          {% for ticket in tickets %}
+            <li class="tlist__row {% if not ticket.is_closed %}is-unresolved{% endif %}">
+              <span class="tlist__avatar">
+                <span class="avatar {{ ticket.requester_name|avatar_color }}">
+                  {{ ticket.requester_name|initials }}
+                </span>
+              </span>
+              <div class="tlist__main">
+                <div class="tlist__top">
+                  <a href="{{ ticket.get_absolute_url }}" class="tlist__subject">{{ ticket.subject }}</a>
+                  <span class="badge {{ ticket.type_badge }}">{{ ticket.get_ticket_type_display }}</span>
+                </div>
+                <div class="tlist__meta">
+                  <span class="ticket-no">{{ ticket.number }}</span>
+                  <span class="dot">·</span>
+                  <span>{{ ticket.requester_name }}</span>
+                  {% if ticket.site_code %}
+                    <span class="dot">·</span><span class="site-code">{{ ticket.site_code }}</span>
+                  {% endif %}
+                  <span class="dot">·</span>
+                  <span>{{ ticket.opened_at|relative_time }}</span>
+                </div>
+              </div>
+              <div class="tlist__side">
+                <span class="badge {{ ticket.status_badge }}">{{ ticket.get_status_display }}</span>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="card__footer">
+        <a href="{% url 'tickets:list' %}?q={{ q|urlencode }}" class="btn btn--ghost btn--sm">
+          Buka di daftar tiket dengan filter lengkap
+        </a>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if articles %}
+    <div class="card">
+      <div class="card__header">
+        <div class="card__title">Artikel Solusi</div>
+        <div class="card__subtitle">{{ articles|length }} hasil</div>
+      </div>
+      <div class="card__body card__body--flush">
+        {% for article in articles %}
+          <a href="{{ article.get_absolute_url }}" class="kb-article">
+            <div class="kb-article__title">{{ article.title }}</div>
+            <div class="kb-article__sum">{{ article.summary|default:article.body|truncatechars:150 }}</div>
+            <div class="kb-article__meta">
+              <span class="badge {{ article.category_badge }}">{{ article.category_label }}</span>
+              <span>{{ article.folder.name }}</span>
+              <span class="dot">·</span>
+              <span>{{ article.views }} kali dilihat</span>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+      <div class="card__footer">
+        <a href="{% url 'solutions:browse' %}?q={{ q|urlencode }}" class="btn btn--ghost btn--sm">
+          Buka di Solutions
+        </a>
+      </div>
+    </div>
+  {% endif %}
+{% endif %}
+
+{% endblock %}

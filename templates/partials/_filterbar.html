@@ -1,0 +1,42 @@
+{% load ui %}
+{# Filter kalender bersama — dipakai dashboard dan halaman laporan. #}
+<div class="filterbar">
+  <span class="filterbar__label">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="3" y="4.5" width="14" height="12.5" rx="1.5"/>
+      <path d="M3 8.5h14M7 2.8v3.2M13 2.8v3.2"/>
+    </svg>
+    Periode
+  </span>
+
+  <div class="chips">
+    {% for value, label in presets %}
+      {% if value != "custom" %}
+        <a href="?{% qs preset=value from=None to=None %}"
+           class="chip {% if range.preset == value %}is-active{% endif %}">{{ label }}</a>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  <form method="get" class="daterange">
+    {% for key, value in request.GET.items %}
+      {% if key != "from" and key != "to" and key != "preset" and key != "page" %}
+        <input type="hidden" name="{{ key }}" value="{{ value }}">
+      {% endif %}
+    {% endfor %}
+    <input type="date" name="from" value="{{ range.start_date|date:'Y-m-d' }}"
+           aria-label="Dari tanggal">
+    <span>–</span>
+    <input type="date" name="to" value="{{ range.end_date|date:'Y-m-d' }}"
+           aria-label="Sampai tanggal">
+    <button type="submit" class="btn btn--secondary btn--sm">Terapkan</button>
+  </form>
+
+  <span class="filterbar__spacer"></span>
+
+  <span class="filterbar__range">
+    Menampilkan <strong>{{ range.label }}</strong>
+    <span class="muted">({{ range.days }} hari)</span>
+  </span>
+</div>

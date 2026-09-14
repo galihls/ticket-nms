@@ -1,0 +1,12 @@
+{# Dipakai lewat {% include %} dari messages.html, variabel: message, cls #}
+<div class="alert {{ cls }}" role="status" data-autodismiss>
+  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <circle cx="10" cy="10" r="7.5"/>
+    {% if message.tags == 'success' %}<path d="m6.8 10.2 2.2 2.2 4.2-4.6"/>
+    {% elif message.tags == 'error' %}<path d="M10 6.3v4.4"/><path d="M10 13.4h.01"/>
+    {% else %}<path d="M10 9.3v4.4"/><path d="M10 6.6h.01"/>{% endif %}
+  </svg>
+  <div class="alert__body">{{ message }}</div>
+  <button type="button" class="alert__close" data-dismiss aria-label="Tutup">&times;</button>
+</div>

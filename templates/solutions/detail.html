@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% load ui %}
+
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<div class="ticket-layout">
+
+  <div class="card">
+    <div class="card__body" style="padding:28px 32px">
+      <div class="row row--wrap mb-2" style="gap:8px">
+        <span class="badge {{ article.category_badge }}">{{ article.category_label }}</span>
+        <span class="badge badge--neutral">{{ article.folder.name }}</span>
+        {% if article.status != "published" %}
+          <span class="badge badge--warn">Draf</span>
+        {% endif %}
+      </div>
+
+      <h1 style="font-size:26px;line-height:1.3">{{ article.title }}</h1>
+
+      {% if article.summary %}
+        <p class="mt-1" style="font-size:14.5px;color:var(--ink-500)">{{ article.summary }}</p>
+      {% endif %}
+
+      <div class="row row--wrap mt-2 text-sm muted" style="gap:8px">
+        <span class="avatar avatar--sm {{ article.author.display_name|avatar_color }}">
+          {{ article.author.initials|default:"??" }}
+        </span>
+        <span>{{ article.author.display_name|default:"Sistem" }}</span>
+        <span class="dot">·</span>
+        <span>Diperbarui {{ article.updated_at|date:"d/m/Y" }}</span>
+        <span class="dot">·</span>
+        <span>{{ article.views }} kali dilihat</span>
+      </div>
+
+      <hr class="divider mt-3">
+
+      <div class="prose">
+        {% for paragraph in article.paragraphs %}
+          {% comment %}
+            Baris pendek tanpa tanda baca akhir diperlakukan sebagai sub-judul —
+            editor kaya menyusul, ini menjaga artikel tetap terbaca sekarang.
+          {% endcomment %}
+          {% if paragraph|length < 60 and not "." in paragraph %}
+            <div class="prose__h">{{ paragraph }}</div>
+          {% else %}
+            <p>{{ paragraph|linebreaksbr }}</p>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      {% if article.tag_list %}
+        <div class="row row--wrap mt-3" style="gap:6px">
+          {% for tag in article.tag_list %}
+            <a href="{% url 'solutions:browse' %}?q={{ tag|urlencode }}" class="badge badge--neutral">
+              #{{ tag }}
+            </a>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {# Penilaian kebermanfaatan #}
+      <div class="vote">
+        {% if voted %}
+          <svg viewBox="0 0 20 20" fill="none" stroke="var(--ok)" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round" width="18" height="18"
+               aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="m6.6 10.2 2.3 2.3 4.5-4.9"/></svg>
+          <span class="strong">Terima kasih — penilaian Anda sudah tercatat.</span>
+        {% else %}
+          <span class="strong">Artikel ini membantu?</span>
+          <form method="post" action="{% url 'solutions:vote' article.slug %}" class="row" style="gap:8px">
+            {% csrf_token %}
+            <button type="submit" name="vote" value="yes" class="btn btn--secondary btn--sm">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M6 17V8.5l3.3-6a2 2 0 0 1 2.7 2.6L11 8h4.6a1.6 1.6 0 0 1 1.6 2l-1.4 6a1.6 1.6 0 0 1-1.6 1H6Z"/>
+                <rect x="2.5" y="8.5" width="3.5" height="8.5" rx="1"/>
+              </svg>
+              Ya, membantu
+            </button>
+            <button type="submit" name="vote" value="no" class="btn btn--secondary btn--sm">
+              Belum membantu
+            </button>
+          </form>
+        {% endif %}
+
+        <span class="spacer"></span>
+        <span class="text-sm muted">
+          {{ article.helpful }} dari {{ article.helpful|add:article.not_helpful }} orang
+          menilai membantu
+          {% if article.helpful_percent %}({{ article.helpful_percent }}%){% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <aside class="stack">
+    <div class="card">
+      <div class="card__body">
+        <a href="{% url 'solutions:edit' article.slug %}" class="btn btn--secondary btn--block">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 16.3 14.6 5.7a2 2 0 0 0-2.8-2.8L1.2 13.5v2.8H4Z" transform="translate(2 0)"/>
+          </svg>
+          Ubah artikel
+        </a>
+        <a href="{% url 'solutions:create' %}" class="btn btn--ghost btn--block mt-1">
+          Tulis artikel baru
+        </a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__header">
+        <div class="card__title">Informasi</div>
+      </div>
+      <div class="card__body">
+        <div class="meta-list">
+          <div class="meta-list__row">
+            <span class="meta-list__key">Kategori</span>
+            <span class="meta-list__val">{{ article.category_label }}</span>
+          </div>
+          <div class="meta-list__row">
+            <span class="meta-list__key">Folder</span>
+            <span class="meta-list__val">{{ article.folder.name }}</span>
+          </div>
+          <div class="meta-list__row">
+            <span class="meta-list__key">Penulis</span>
+            <span class="meta-list__val">{{ article.author.display_name|default:"Sistem" }}</span>
+          </div>
+          <div class="meta-list__row">
+            <span class="meta-list__key">Dibuat</span>
+            <span class="meta-list__val">{{ article.created_at|date:"d/m/Y" }}</span>
+          </div>
+          <div class="meta-list__row">
+            <span class="meta-list__key">Status</span>
+            <span class="meta-list__val">{{ article.get_status_display }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if related %}
+      <div class="card">
+        <div class="card__header">
+          <div class="card__title">Artikel Terkait</div>
+          <div class="card__subtitle">{{ article.folder.name }}</div>
+        </div>
+        <div class="card__body card__body--flush">
+          <ul class="mini-list">
+            {% for other in related %}
+              <li>
+                <a href="{{ other.get_absolute_url }}">
+                  <span class="mini-list__text">
+                    <span class="mini-list__title" style="white-space:normal">{{ other.title }}</span>
+                    <span class="mini-list__meta">{{ other.views }} kali dilihat</span>
+                  </span>
+                </a>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

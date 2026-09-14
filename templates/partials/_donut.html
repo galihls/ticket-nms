@@ -1,0 +1,51 @@
+{% comment %}
+  Donat status tiket + legenda berlabel.
+
+  Identitas segmen tidak pernah hanya warna: setiap segmen punya baris legenda
+  dengan nama, jumlah, dan persentase. Celah 2px berwarna permukaan yang
+  memisahkan segmen — bukan garis tepi.
+{% endcomment %}
+<div class="chart-row">
+  <div class="chart-donut">
+    <svg width="{{ donut.size }}" height="{{ donut.size }}"
+         viewBox="0 0 {{ donut.size }} {{ donut.size }}"
+         role="img" aria-label="Sebaran status tiket">
+      <title>Sebaran status tiket: total {{ donut.total }} tiket</title>
+
+      {% if donut.is_empty %}
+        <circle cx="{{ donut.center }}" cy="{{ donut.center }}" r="{{ donut.radius }}"
+                fill="none" stroke="#EFF2F6" stroke-width="{{ donut.stroke }}"/>
+      {% else %}
+        <g transform="rotate(-90 {{ donut.center }} {{ donut.center }})">
+          {% for seg in donut.segments %}
+            {% if seg.value %}
+              <circle class="chart-donut__seg"
+                      cx="{{ donut.center }}" cy="{{ donut.center }}" r="{{ donut.radius }}"
+                      fill="none" stroke="{{ seg.color }}" stroke-width="{{ donut.stroke }}"
+                      stroke-dasharray="{{ seg.dash }} {{ seg.gap }}"
+                      stroke-dashoffset="{{ seg.offset }}">
+                <title>{{ seg.label }}: {{ seg.value }} tiket ({{ seg.percent }}%)</title>
+              </circle>
+            {% endif %}
+          {% endfor %}
+        </g>
+      {% endif %}
+    </svg>
+
+    <div class="chart-donut__center">
+      <span class="chart-donut__total">{{ donut.total }}</span>
+      <span class="chart-donut__caption">Total tiket</span>
+    </div>
+  </div>
+
+  <ul class="chart-legend">
+    {% for seg in donut.segments %}
+      <li>
+        <span class="chart-legend__dot" style="background:{{ seg.color }}"></span>
+        <span class="chart-legend__name">{{ seg.label }}</span>
+        <span class="chart-legend__value">{{ seg.value }}</span>
+        <span class="chart-legend__pct">{{ seg.percent }}%</span>
+      </li>
+    {% endfor %}
+  </ul>
+</div>

@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% load ui %}
+
+{% block content %}
+<div class="ticket-layout">
+
+  <div class="stack">
+    {# Identitas sesi yang sedang dipakai — syarat dari requirement SSO #}
+    <div class="card">
+      <div class="card__body">
+        <div class="row row--wrap" style="gap:16px">
+          <span class="avatar avatar--xl {{ user.display_name|avatar_color }}">{{ user.initials }}</span>
+          <div style="flex:1 1 240px;min-width:0">
+            <h2>{{ user.display_name }}</h2>
+            <div class="text-sm muted mt-1">{{ user.email|default:"Email belum diisi" }}</div>
+            <div class="row row--wrap mt-2" style="gap:6px">
+              {% if user.is_superuser %}
+                <span class="badge badge--info">Administrator</span>
+              {% else %}
+                <span class="badge badge--neutral">Agent</span>
+              {% endif %}
+              {% if user.position %}<span class="badge badge--neutral">{{ user.position }}</span>{% endif %}
+              <span class="badge badge--teal">Shift {{ user.get_shift_display }}</span>
+            </div>
+          </div>
+
+          <form method="post" action="{% url 'accounts:logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn--secondary">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M8 17H4.5a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1H8"/>
+                <path d="M13 13.5 16.5 10 13 6.5"/><path d="M16.5 10H8"/>
+              </svg>
+              Keluar dari sesi
+            </button>
+          </form>
+        </div>
+      </div>
+      <div class="card__footer">
+        <svg viewBox="0 0 21 21" width="14" height="14" aria-hidden="true">
+          <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+          <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+          <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+          <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+        </svg>
+        Sesi {{ sso.PROVIDER }} · {{ sso.PROTOCOL }} · tenant
+        <span class="mono">{{ sso.TENANT_DOMAIN }}</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__header">
+        <div class="card__title">Data Diri</div>
+        <div class="card__subtitle">Dipakai pada tiket dan laporan</div>
+      </div>
+      <form method="post" data-guard>
+        {% csrf_token %}
+        <div class="card__body">
+          <div class="form-grid">
+            <div class="form-row">
+              <label class="form-label" for="{{ form.first_name.id_for_label }}">Nama depan</label>
+              {{ form.first_name }}
+            </div>
+            <div class="form-row">
+              <label class="form-label" for="{{ form.last_name.id_for_label }}">Nama belakang</label>
+              {{ form.last_name }}
+            </div>
+            <div class="form-row {% if form.email.errors %}has-error{% endif %}">
+              <label class="form-label" for="{{ form.email.id_for_label }}">Email</label>
+              {{ form.email }}
+              {% for error in form.email.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="form-row">
+              <label class="form-label" for="{{ form.phone.id_for_label }}">No. telepon</label>
+              {{ form.phone }}
+            </div>
+            <div class="form-row">
+              <label class="form-label" for="{{ form.nik.id_for_label }}">NIK / NIP</label>
+              {{ form.nik }}
+            </div>
+            <div class="form-row">
+              <label class="form-label" for="{{ form.department.id_for_label }}">Departemen</label>
+              {{ form.department }}
+            </div>
+            <div class="form-row">
+              <label class="form-label" for="{{ form.position.id_for_label }}">Jabatan</label>
+              {{ form.position }}
+            </div>
+            <div class="form-row">
+              <label class="form-label" for="{{ form.shift.id_for_label }}">Shift</label>
+              {{ form.shift }}
+            </div>
+          </div>
+        </div>
+        <div class="card__footer">
+          <button type="submit" class="btn btn--primary btn--sm">Simpan Perubahan</button>
+          <span class="spacer"></span>
+          <span>Username <span class="mono">{{ user.username }}</span> tidak dapat diubah sendiri.</span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <aside class="stack">
+    <div class="card">
+      <div class="card__header">
+        <div class="card__title">Tiket Saya</div>
+      </div>
+      <div class="card__body">
+        <div class="meta-list">
+          <div class="meta-list__row">
+            <span class="meta-list__key">Total</span>
+            <span class="meta-list__val">{{ stats.total }}</span>
+          </div>
+          <div class="meta-list__row">
+            <span class="meta-list__key">Open</span>
+            <span class="meta-list__val">{{ stats.open }}</span>
+          </div>
+          <div class="meta-list__row">
+            <span class="meta-list__key">Outstanding</span>
+            <span class="meta-list__val">{{ stats.outstanding }}</span>
+          </div>
+          <div class="meta-list__row">
+            <span class="meta-list__key">Close</span>
+            <span class="meta-list__val">{{ stats.closed }}</span>
+          </div>
+        </div>
+        <a href="{% url 'tickets:list' %}?assignee=me" class="btn btn--secondary btn--block mt-2">
+          Lihat semua tiket saya
+        </a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__header">
+        <div class="card__title">Aktivitas Terakhir</div>
+      </div>
+      <div class="card__body">
+        <ul class="timeline">
+          {% for log in activities %}
+            <li>
+              <span class="timeline__dot"></span>
+              <div class="timeline__title">{{ log.get_verb_display }} {{ log.target_label }}</div>
+              <div class="timeline__time">{{ log.created_at|relative_time }}</div>
+            </li>
+          {% empty %}
+            <li>
+              <span class="timeline__dot"></span>
+              <div class="timeline__title muted">Belum ada aktivitas.</div>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </aside>
+</div>
+{% endblock %}

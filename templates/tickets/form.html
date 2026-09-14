@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% load ui %}
+
+{% block page_desc %}
+  <p class="page-header__desc">
+    {% if is_edit %}
+      Perubahan tercatat pada riwayat tiket.
+    {% else %}
+      Nomor tiket dibuat otomatis saat disimpan — tidak perlu diisi manual.
+    {% endif %}
+  </p>
+{% endblock %}
+
+{% block page_actions %}
+  <a href="{% if is_edit %}{{ ticket.get_absolute_url }}{% else %}{% url 'tickets:list' %}{% endif %}"
+     class="btn btn--secondary">Batal</a>
+{% endblock %}
+
+{% block content %}
+<form method="post" novalidate data-guard>
+  {% csrf_token %}
+
+  <div class="grid" style="grid-template-columns: minmax(0,1fr) 300px; align-items:start">
+
+    <div class="stack">
+      {% if form.errors %}
+        <div class="alert alert--error">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="10" cy="10" r="7.5"/><path d="M10 6.3v4.4"/><path d="M10 13.4h.01"/>
+          </svg>
+          <div class="alert__body">
+            <div class="alert__title">Ada isian yang perlu diperbaiki</div>
+            Periksa kembali kolom yang ditandai merah di bawah.
+          </div>
+        </div>
+      {% endif %}
+
+      {% if source_ticket %}
+        <div class="alert alert--info">
+          <div class="alert__body">
+            Melanjutkan dari tiket <strong>{{ source_ticket.number }}</strong>.
+          </div>
+        </div>
+      {% endif %}
+
+      {# ── Tipe tiket: menentukan kode pada nomor tiket ─────────────── #}
+      <div class="card">
+        <div class="card__header">
+          <div>
+            <div class="card__title">Tipe Tiket</div>
+            <div class="card__subtitle">Menentukan kode pada nomor tiket</div>
+          </div>
+        </div>
+        <div class="card__body">
+          <div class="choice-cards" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+            {% for radio in form.ticket_type %}
+              <label class="choice-card">
+                {{ radio.tag }}
+                <span class="choice-card__box">
+                  <span class="choice-card__title">
+                    {% if radio.data.value == "PR" %}
+                      <svg viewBox="0 0 20 20" fill="none" stroke="var(--danger)" stroke-width="1.7"
+                           stroke-linecap="round" stroke-linejoin="round" width="17" height="17"
+                           aria-hidden="true">
+                        <path d="M10 2.8 2.8 16.2h14.4L10 2.8Z"/><path d="M10 8v3.4M10 13.6h.01"/>
+                      </svg>
+                    {% else %}
+                      <svg viewBox="0 0 20 20" fill="none" stroke="var(--teal-600)" stroke-width="1.7"
+                           stroke-linecap="round" stroke-linejoin="round" width="17" height="17"
+                           aria-hidden="true">
+                        <path d="M10 2.5v1.8M4.6 4.6l1.3 1.3M2.5 10h1.8M15.7 5.9l1.3-1.3M15.7 10h1.8"/>
+                        <path d="M7.8 15.5h4.4M8.4 17.5h3.2"/>
+                        <path d="M10 6.5a3.5 3.5 0 0 1 2.1 6.3v.7H7.9v-.7A3.5 3.5 0 0 1 10 6.5Z"/>
+                      </svg>
+                    {% endif %}
+                    {{ radio.choice_label }}
+                    <span class="badge badge--neutral" style="margin-left:auto">
+                      {{ radio.data.value }}
+                    </span>
+                  </span>
+                  <span class="choice-card__desc">
+                    {% if radio.data.value == "PR" %}
+                      Gangguan pada layanan atau perangkat yang perlu ditangani.
+                    {% else %}
+                      Permintaan fitur atau penyesuaian baru pada sistem.
+                    {% endif %}
+                  </span>
+                </span>
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      {# ── Isi tiket ─────────────────────────────────────────────────── #}
+      <div class="card">
+        <div class="card__header">
+          <div class="card__title">Detail Tiket</div>
+        </div>
+        <div class="card__body">
+          <div class="form-row {% if form.subject.errors %}has-error{% endif %}">
+            <label class="form-label" for="{{ form.subject.id_for_label }}">
+              {{ form.subject.label }}<span class="req">*</span>
+            </label>
+            {{ form.subject }}
+            {% for error in form.subject.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
+          </div>
+
+          <div class="form-row {% if form.description.errors %}has-error{% endif %}">
+            <label class="form-label" for="{{ form.description.id_for_label }}">
+              {{ form.description.label }}
+            </label>
+            {{ form.description }}
+            {% for error in form.description.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
+          </div>
+
+          <div class="form-grid">
+            <div class="form-row {% if form.requester_name.errors %}has-error{% endif %}">
+              <label class="form-label" for="{{ form.requester_name.id_for_label }}">
+                {{ form.requester_name.label }}<span class="req">*</span>
+              </label>
+              {{ form.requester_name }}
+              {% for error in form.requester_name.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
+            </div>
+
+            <div class="form-row {% if form.requester_email.errors %}has-error{% endif %}">
+              <label class="form-label" for="{{ form.requester_email.id_for_label }}">
+                {{ form.requester_email.label }}
+              </label>
+              {{ form.requester_email }}
+              {% for error in form.requester_email.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
+            </div>
+
+            <div class="form-row">
+              <label class="form-label" for="{{ form.company.id_for_label }}">
+                {{ form.company.label }}
+              </label>
+              {{ form.company }}
+            </div>
+
+            <div class="form-row">
+              <label class="form-label" for="{{ form.site_code.id_for_label }}">
+                {{ form.site_code.label }}
+              </label>
+              {{ form.site_code }}
+              <div class="form-help">Diisi otomatis dari Zabbix setelah integrasi aktif.</div>
+            </div>
+
+            <div class="form-row span-full">
+              <label class="form-label" for="{{ form.tags.id_for_label }}">
+                {{ form.tags.label }}
+              </label>
+              {{ form.tags }}
+              <div class="form-help">{{ form.tags.help_text }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# ── Waktu penanganan ──────────────────────────────────────────── #}
+      <div class="card">
+        <div class="card__header">
+          <div>
+            <div class="card__title">Waktu Penanganan</div>
+            <div class="card__subtitle">Dipakai menghitung durasi pada laporan</div>
+          </div>
+        </div>
+        <div class="card__body">
+          <div class="form-grid">
+            <div class="form-row {% if form.opened_at.errors %}has-error{% endif %}">
+              <label class="form-label" for="{{ form.opened_at.id_for_label }}">
+                {{ form.opened_at.label }}<span class="req">*</span>
+              </label>
+              {{ form.opened_at }}
+              {% for error in form.opened_at.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
+            </div>
+
+            <div class="form-row {% if form.due_at.errors %}has-error{% endif %}">
+              <label class="form-label" for="{{ form.due_at.id_for_label }}">
+                {{ form.due_at.label }}
+              </label>
+              {{ form.due_at }}
+              {% for error in form.due_at.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ── Panel kanan ───────────────────────────────────────────────── #}
+    <aside class="stack">
+      {# Pratinjau nomor: format [Tahun][Kode][NomorUrut] #}
+      <div class="card">
+        <div class="card__header">
+          <div class="card__title">Nomor Tiket</div>
+        </div>
+        <div class="card__body" style="text-align:center">
+          <div class="ticket-no" style="font-size:26px;letter-spacing:.04em">
+            {{ number_preview }}
+          </div>
+          <div class="text-xs muted mt-1">
+            {% if is_edit %}Nomor tetap setelah tiket dibuat{% else %}Nomor berikutnya yang tersedia{% endif %}
+          </div>
+
+          <hr class="divider">
+
+          <div class="text-xs muted" style="text-align:left;line-height:1.7">
+            Format <span class="mono strong">[Tahun][Kode][Urut]</span><br>
+            <span class="mono">{% now "y" %}</span> — tahun berjalan<br>
+            <span class="mono">PR</span> — Problem ·
+            <span class="mono">FR</span> — Feature Request<br>
+            <span class="mono">0001</span> — nomor urut per tahun
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card__header">
+          <div class="card__title">Penugasan</div>
+        </div>
+        <div class="card__body">
+          <div class="props">
+            <div class="props__field">
+              <label class="props__label" for="{{ form.status.id_for_label }}">
+                {{ form.status.label }}
+              </label>
+              {{ form.status }}
+            </div>
+
+            <div class="props__field">
+              <label class="props__label" for="{{ form.priority.id_for_label }}">
+                {{ form.priority.label }}
+              </label>
+              {{ form.priority }}
+            </div>
+
+            <div class="props__field">
+              <label class="props__label" for="{{ form.assignee.id_for_label }}">
+                {{ form.assignee.label }}
+              </label>
+              {{ form.assignee }}
+            </div>
+
+            <div class="props__field">
+              <label class="props__label" for="{{ form.group.id_for_label }}">
+                {{ form.group.label }}
+              </label>
+              {{ form.group }}
+            </div>
+
+            <div class="props__field">
+              <label class="props__label" for="{{ form.source.id_for_label }}">
+                {{ form.source.label }}
+              </label>
+              {{ form.source }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card__body">
+          <button type="submit" class="btn btn--primary btn--lg btn--block">
+            {% if is_edit %}Simpan Perubahan{% else %}Buat Tiket{% endif %}
+          </button>
+          <a href="{% if is_edit %}{{ ticket.get_absolute_url }}{% else %}{% url 'tickets:list' %}{% endif %}"
+             class="btn btn--ghost btn--block mt-1">Batal</a>
+        </div>
+      </div>
+    </aside>
+  </div>
+</form>
+{% endblock %}

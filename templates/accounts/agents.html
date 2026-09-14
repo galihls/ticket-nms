@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load ui %}
+
+{% block page_desc %}
+  <p class="page-header__desc">
+    Beban kerja setiap agent — dipakai saat membagi tiket baru.
+  </p>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid--3">
+  {% for agent in agents %}
+    <div class="card">
+      <div class="card__body">
+        <div class="row" style="gap:12px;align-items:flex-start">
+          <span class="avatar avatar--lg {{ agent.display_name|avatar_color }}">{{ agent.initials }}</span>
+          <div style="flex:1 1 auto;min-width:0">
+            <div class="strong" style="color:var(--ink-900)">{{ agent.display_name }}</div>
+            <div class="text-xs muted">{{ agent.position|default:"Agent" }}</div>
+            <div class="text-xs muted truncate">{{ agent.email }}</div>
+          </div>
+          {% if agent.is_superuser %}
+            <span class="badge badge--info">Admin</span>
+          {% endif %}
+        </div>
+
+        <hr class="divider">
+
+        <div class="row" style="gap:0;text-align:center">
+          <div style="flex:1">
+            <div class="stat__value" style="font-size:19px">{{ agent.open }}</div>
+            <div class="text-xs muted">Open</div>
+          </div>
+          <div style="flex:1">
+            <div class="stat__value" style="font-size:19px">{{ agent.outstanding }}</div>
+            <div class="text-xs muted">Outstanding</div>
+          </div>
+          <div style="flex:1">
+            <div class="stat__value" style="font-size:19px">{{ agent.closed }}</div>
+            <div class="text-xs muted">Close</div>
+          </div>
+        </div>
+
+        <div class="row mt-2 text-xs muted" style="gap:6px">
+          <span class="badge badge--teal">Shift {{ agent.get_shift_display }}</span>
+          {% if agent.department %}<span>{{ agent.department }}</span>{% endif %}
+        </div>
+      </div>
+      <div class="card__footer">
+        <a href="{% url 'tickets:list' %}?assignee={{ agent.id }}" class="btn btn--ghost btn--sm">
+          Lihat {{ agent.total }} tiket
+        </a>
+      </div>
+    </div>
+  {% empty %}
+    <div class="card" style="grid-column:1/-1">
+      <div class="empty">
+        <div class="empty__title">Belum ada agent aktif</div>
+        <div class="empty__desc">Tambahkan pengguna lewat panel administrasi.</div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

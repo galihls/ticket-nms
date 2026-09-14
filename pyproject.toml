@@ -1,0 +1,20 @@
+[tool.ruff]
+line-length = 96
+target-version = "py310"
+exclude = [".venv", "migrations", "staticfiles"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "DJ"]
+ignore = [
+    "E501",   # panjang baris diatur formatter
+    "B008",   # pemanggilan di argumen default lazim di Django
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "config"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.dev"
+python_files = ["test_*.py", "*_test.py"]
+testpaths = ["tests", "apps"]
+addopts = "-q --disable-warnings"
