@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% load ui %}
+
+{% block page_desc %}
+  <p class="page-header__desc">
+    Manage corporate clients and partner institutions. Active companies will appear in ticket creation options.
+  </p>
+{% endblock %}
+
+{% block page_actions %}
+  <button type="button" class="btn btn--primary" id="btn-open-add-company">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"
+         stroke-linecap="round" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11"/></svg>
+    Add Company
+  </button>
+{% endblock %}
+
+{% block content %}
+
+{# ── Stat overview ────────────────────────────────────────────────────── #}
+<div class="grid grid--3 mb-3">
+  <div class="stat">
+    <div class="stat__label">Total Companies</div>
+    <div class="stat__value">{{ total_count }}</div>
+    <div class="stat__meta">Registered corporate partners</div>
+  </div>
+  <div class="stat stat--open">
+    <div class="stat__label">Active</div>
+    <div class="stat__value">{{ active_count }}</div>
+    <div class="stat__meta">Available in ticket forms</div>
+  </div>
+  <div class="stat stat--closed">
+    <div class="stat__label">Inactive</div>
+    <div class="stat__value">{{ inactive_count }}</div>
+    <div class="stat__meta">Archived / disabled</div>
+  </div>
+</div>
+
+{# ── Filter and Search Bar ────────────────────────────────────────────── #}
+<div class="filterbar mb-3">
+  <form method="get" class="row" style="gap:8px;width:100%;align-items:center">
+    <label for="company-q" class="sr-only">Search</label>
+    <div style="position:relative;width:320px">
+      <input type="search" name="q" id="company-q" value="{{ query }}" class="form-input"
+             placeholder="Search company by name, code, or PIC…"
+             style="height:32px;font-size:13px;padding-left:32px">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+           style="position:absolute;left:10px;top:8px;width:16px;height:16px;color:var(--ink-500);pointer-events:none">
+        <circle cx="9" cy="9" r="5.5"/><path d="m13.2 13.2 3.3 3.3"/>
+      </svg>
+    </div>
+    <button type="submit" class="btn btn--primary btn--sm">Search</button>
+    {% if query %}
+      <a href="{% url 'tickets:company_list' %}" class="btn btn--secondary btn--sm">Reset</a>
+    {% endif %}
+    <span class="filterbar__spacer"></span>
+    <span class="filterbar__range">Showing <strong>{{ companies|length }}</strong> compan{{ companies|length|pluralize:"y,ies" }}</span>
+  </form>
+</div>
+
+{# ── Companies Table ──────────────────────────────────────────────────── #}
+<div class="card mb-3">
+  <div class="card__body card__body--flush">
+    <div class="table-wrap">
+      <table class="table table--compact table--striped">
+        <thead>
+          <tr>
+            <th>Company Name</th>
+            <th>Code</th>
+            <th>Contact Person</th>
+            <th>Phone</th>
+            <th>Address</th>
+            <th class="num">Tickets</th>
+            <th>Status</th>
+            <th style="text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for company in companies %}
+            <tr>
+              <td>
+                <div class="strong" style="color:var(--ink-900)">{{ company.name }}</div>
+              </td>
+              <td>
+                {% if company.code %}
+                  <span class="badge badge--neutral">{{ company.code }}</span>
+                {% else %}
+                  <span class="muted">—</span>
+                {% endif %}
+              </td>
+              <td>{{ company.contact_person|default:"—" }}</td>
+              <td>{{ company.contact_phone|default:"—" }}</td>
+              <td class="truncate" style="max-width:200px" title="{{ company.address }}">
+                {{ company.address|default:"—" }}
+              </td>
+              <td class="num">
+                {% if company.total_tickets > 0 %}
+                  <a href="{% url 'tickets:list' %}?company={{ company.name|urlencode }}" class="badge badge--info" title="View tickets">
+                    {{ company.total_tickets }}
+                  </a>
+                {% else %}
+                  <span class="muted">0</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if company.is_active %}
+                  <span class="badge badge--ok">Active</span>
+                {% else %}
+                  <span class="badge badge--neutral">Inactive</span>
+                {% endif %}
+              </td>
+              <td style="text-align:right">
+                <div class="row" style="gap:6px;justify-content:flex-end">
+                  <a href="{% url 'tickets:company_edit' company.pk %}" class="btn btn--ghost btn--sm" title="Edit company details">
+                    Edit
+                  </a>
+                  <form method="post" action="{% url 'tickets:company_toggle' company.pk %}" style="display:inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn--secondary btn--sm" title="{% if company.is_active %}Deactivate{% else %}Activate{% endif %}">
+                      {% if company.is_active %}Deactivate{% else %}Activate{% endif %}
+                    </button>
+                  </form>
+                  {% if company.total_tickets == 0 %}
+                    <form method="post" action="{% url 'tickets:company_delete' company.pk %}" style="display:inline" onsubmit="return confirm('Delete company {{ company.name }}?')">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn--ghost btn--sm" style="color:var(--danger-700)" title="Delete company">
+                        Delete
+                      </button>
+                    </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="8">
+                <div class="empty">
+                  <div class="empty__title">No companies found</div>
+                  <div class="empty__desc">
+                    {% if query %}No results matching "{{ query }}".{% else %}Click "Add Company" button to register your first corporate partner.{% endif %}
+                  </div>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{# ── Modal Add Company ────────────────────────────────────────────────── #}
+<div class="modal" id="add-company-modal" hidden>
+  <div class="modal__box" role="dialog" aria-modal="true" aria-labelledby="add-modal-title">
+    <form method="post" action="{% url 'tickets:company_list' %}">
+      {% csrf_token %}
+
+      <div class="modal__head">
+        <h2 id="add-modal-title">Add Corporate Partner</h2>
+        <button type="button" class="modal__close" data-modal-close aria-label="Close">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" aria-hidden="true"><path d="m5.5 5.5 9 9M14.5 5.5l-9 9"/></svg>
+        </button>
+      </div>
+
+      <div class="modal__body">
+        <div class="form-row">
+          <label class="form-label" for="{{ form.name.id_for_label }}">Company Name *</label>
+          {{ form.name }}
+          {% if form.name.errors %}<div class="form-error">{{ form.name.errors.0 }}</div>{% endif %}
+        </div>
+
+        <div class="grid grid--2" style="gap:12px">
+          <div class="form-row">
+            <label class="form-label" for="{{ form.code.id_for_label }}">Company Code</label>
+            {{ form.code }}
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="{{ form.contact_phone.id_for_label }}">Contact Phone</label>
+            {{ form.contact_phone }}
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label" for="{{ form.contact_person.id_for_label }}">Contact Person (PIC)</label>
+          {{ form.contact_person }}
+        </div>
+
+        <div class="form-row">
+          <label class="form-label" for="{{ form.address.id_for_label }}">Office Address</label>
+          {{ form.address }}
+        </div>
+
+        <div class="form-row" style="margin-bottom:0">
+          <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            {{ form.is_active }}
+            <span>Active (available in ticket creation)</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal__foot">
+        <button type="button" class="btn btn--secondary" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn--primary">Save Company</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const modal = document.getElementById('add-company-modal');
+    const openBtn = document.getElementById('btn-open-add-company');
+    if (!modal || !openBtn) return;
+
+    openBtn.addEventListener('click', function() {
+      modal.hidden = false;
+      const input = modal.querySelector('input[name="name"]');
+      if (input) input.focus();
+    });
+
+    modal.querySelectorAll('[data-modal-close]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        modal.hidden = true;
+      });
+    });
+
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) modal.hidden = true;
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && !modal.hidden) modal.hidden = true;
+    });
+  })();
+</script>
+
+{% endblock %}

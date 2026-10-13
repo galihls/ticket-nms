@@ -11,6 +11,7 @@
   {% url 'core:dashboard' as u_dashboard %}
   {% url 'tickets:list' as u_tickets %}
   {% url 'tickets:create' as u_ticket_new %}
+  {% url 'tickets:company_list' as u_companies %}
   {% url 'solutions:home' as u_solutions %}
   {% url 'reports:export' as u_reports %}
   {% url 'core:activity_log' as u_activity %}
@@ -32,7 +33,7 @@
       Dashboard
     </a>
 
-    <a href="{{ u_tickets }}" class="nav-item {% if '/tiket/' in request.path and request.path != u_ticket_new %}is-active{% endif %}">
+    <a href="{{ u_tickets }}" class="nav-item {% if '/tiket/' in request.path and request.path != u_ticket_new and '/companies/' not in request.path %}is-active{% endif %}">
       <svg class="nav-item__icon" viewBox="0 0 20 20" fill="none" stroke="currentColor"
            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M2.5 7.5V5a1 1 0 0 1 1-1h13a1 1 0 0 1 1 1v2.5a2.5 2.5 0 0 0 0 5V15a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-2.5a2.5 2.5 0 0 0 0-5Z"/>
@@ -49,18 +50,6 @@
       </svg>
       Create Ticket
     </a>
-
-    {% if is_admin %}
-      <a href="{{ u_agents }}" class="nav-item {% if request.path == u_agents %}is-active{% endif %}">
-        <svg class="nav-item__icon" viewBox="0 0 20 20" fill="none" stroke="currentColor"
-             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="7.5" cy="7" r="2.8"/>
-          <path d="M2.5 16a5 5 0 0 1 10 0"/>
-          <path d="M13.5 5.2a2.8 2.8 0 0 1 0 5.6M14 16a5 5 0 0 0-1.6-3.7"/>
-        </svg>
-        Agents
-      </a>
-    {% endif %}
 
     <div class="nav-section">Knowledge</div>
 
@@ -84,6 +73,27 @@
     </a>
 
     {% if is_admin %}
+      <div class="nav-section">Management</div>
+
+      <a href="{{ u_companies }}" class="nav-item {% if '/companies/' in request.path %}is-active{% endif %}">
+        <svg class="nav-item__icon" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+             stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 17.5h14M4.5 17.5V4a1.5 1.5 0 0 1 1.5-1.5h8a1.5 1.5 0 0 1 1.5 1.5v13.5"/>
+          <path d="M7.5 6h1M11.5 6h1M7.5 9.5h1M11.5 9.5h1M7.5 13h1M11.5 13h1M9.5 17.5V14h1v3.5"/>
+        </svg>
+        Companies
+      </a>
+
+      <a href="{{ u_agents }}" class="nav-item {% if request.path == u_agents %}is-active{% endif %}">
+        <svg class="nav-item__icon" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="7.5" cy="7" r="2.8"/>
+          <path d="M2.5 16a5 5 0 0 1 10 0"/>
+          <path d="M13.5 5.2a2.8 2.8 0 0 1 0 5.6M14 16a5 5 0 0 0-1.6-3.7"/>
+        </svg>
+        Agents
+      </a>
+
       <a href="{{ u_activity }}" class="nav-item {% if request.path == u_activity %}is-active{% endif %}">
         <svg class="nav-item__icon" viewBox="0 0 20 20" fill="none" stroke="currentColor"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

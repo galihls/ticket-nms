@@ -12,8 +12,8 @@ from apps.accounts.models import User
 from apps.core import periods
 from apps.core.models import ActivityLog, Notification
 
-from .forms import GROUPS, CloseTicketForm, ReplyForm, TicketForm
-from .models import Ticket, TicketReply
+from .forms import GROUPS, CloseTicketForm, ReplyForm, TicketForm, CompanyForm
+from .models import Ticket, TicketReply, Company
 
 SORTS = [
     ("-opened_at", "Newest created"),
@@ -479,3 +479,120 @@ def ticket_bulk(request):
 
     back = request.POST.get("next")
     return redirect(back or "tickets:list")
+
+
+# ── Company / Corporate Management (Admin Only) ─────────────────────────────
+
+@login_required
+def company_list(request):
+    """Admin-only management page for corporate clients / companies."""
+    if not (request.user.is_staff or request.user.is_superuser):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Only administrators can manage companies.")
+
+    if request.method == "POST":
+        form = CompanyForm(request.POST)
+        if form.is_valid():
+            company = form.save()
+            ActivityLog.record(
+                request.user, ActivityLog.Verb.TICKET_UPDATE,
+                target_label=company.name, subject=f"Added new corporate partner: {company.name}",
+                reason="Created company master record",
+            )
+            messages.success(request, f"Company '{company.name}' added successfully.")
+            return redirect("tickets:company_list")
+        else:
+            messages.error(request, "Please check the form inputs.")
+    else:
+        form = CompanyForm()
+
+    qs = Company.objects.all()
+    q = request.GET.get("q", "").strip()
+    if q:
+        qs = qs.filter(Q(name__icontains=q) | Q(code__icontains=q) | Q(contact_person__icontains=q))
+
+    companies = list(qs)
+    # Calculate ticket counts per company
+    ticket_counts = dict(
+        Ticket.objects.values("company")
+        .annotate(total=Count("id"))
+        .values_list("company", "total")
+    )
+    for c in companies:
+        c.total_tickets = ticket_counts.get(c.name, 0)
+
+    ctx = {
+        "page_title": "Companies",
+        "breadcrumb": [("Companies", None)],
+        "companies": companies,
+        "form": form,
+        "query": q,
+        "total_count": len(companies),
+        "active_count": sum(1 for c in companies if c.is_active),
+        "inactive_count": sum(1 for c in companies if not c.is_active),
+    }
+    return render(request, "tickets/company_list.html", ctx)
+
+
+@login_required
+def company_edit(request, pk):
+    """Admin-only edit page for a company."""
+    if not (request.user.is_staff or request.user.is_superuser):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Only administrators can manage companies.")
+
+    company = get_object_or_404(Company, pk=pk)
+    old_name = company.name
+
+    if request.method == "POST":
+        form = CompanyForm(request.POST, instance=company)
+        if form.is_valid():
+            updated = form.save()
+            if old_name != updated.name:
+                Ticket.objects.filter(company=old_name).update(company=updated.name)
+            messages.success(request, f"Company '{updated.name}' updated successfully.")
+            return redirect("tickets:company_list")
+    else:
+        form = CompanyForm(instance=company)
+
+    ctx = {
+        "page_title": f"Edit {company.name}",
+        "breadcrumb": [("Companies", reverse("tickets:company_list")), ("Edit", None)],
+        "company": company,
+        "form": form,
+    }
+    return render(request, "tickets/company_form.html", ctx)
+
+
+@login_required
+@require_POST
+def company_toggle(request, pk):
+    """Toggle active status of a company."""
+    if not (request.user.is_staff or request.user.is_superuser):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Only administrators can manage companies.")
+
+    company = get_object_or_404(Company, pk=pk)
+    company.is_active = not company.is_active
+    company.save(update_fields=["is_active", "updated_at"])
+    status_str = "activated" if company.is_active else "deactivated"
+    messages.success(request, f"Company '{company.name}' {status_str}.")
+    return redirect("tickets:company_list")
+
+
+@login_required
+@require_POST
+def company_delete(request, pk):
+    """Delete a company if it has 0 tickets, or warn user."""
+    if not (request.user.is_staff or request.user.is_superuser):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Only administrators can manage companies.")
+
+    company = get_object_or_404(Company, pk=pk)
+    ticket_count = Ticket.objects.filter(company=company.name).count()
+    if ticket_count > 0:
+        messages.error(request, f"Cannot delete '{company.name}' because {ticket_count} ticket(s) are associated with it. Please deactivate it instead.")
+    else:
+        company.delete()
+        messages.success(request, f"Company '{company.name}' deleted successfully.")
+    return redirect("tickets:company_list")

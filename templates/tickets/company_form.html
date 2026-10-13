@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load ui %}
+
+{% block page_desc %}
+  <p class="page-header__desc">
+    Edit corporate details for {{ company.name }}.
+  </p>
+{% endblock %}
+
+{% block content %}
+<div class="row" style="max-width:720px;margin:0 auto">
+  <div class="card" style="width:100%">
+    <div class="card__header">
+      <div>
+        <div class="card__title">Edit Company Information</div>
+        <div class="card__subtitle">Updating the name will update all associated tickets automatically.</div>
+      </div>
+    </div>
+
+    <form method="post" action="{% url 'tickets:company_edit' company.pk %}">
+      {% csrf_token %}
+
+      <div class="card__body">
+        <div class="form-row">
+          <label class="form-label" for="{{ form.name.id_for_label }}">Company Name *</label>
+          {{ form.name }}
+          {% if form.name.errors %}<div class="form-error">{{ form.name.errors.0 }}</div>{% endif %}
+        </div>
+
+        <div class="grid grid--2" style="gap:16px">
+          <div class="form-row">
+            <label class="form-label" for="{{ form.code.id_for_label }}">Company Code</label>
+            {{ form.code }}
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="{{ form.contact_phone.id_for_label }}">Contact Phone</label>
+            {{ form.contact_phone }}
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label" for="{{ form.contact_person.id_for_label }}">Contact Person (PIC)</label>
+          {{ form.contact_person }}
+        </div>
+
+        <div class="form-row">
+          <label class="form-label" for="{{ form.address.id_for_label }}">Office Address</label>
+          {{ form.address }}
+        </div>
+
+        <div class="form-row">
+          <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            {{ form.is_active }}
+            <span>Active (available in ticket creation)</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card__footer" style="display:flex;justify-content:space-between">
+        <a href="{% url 'tickets:company_list' %}" class="btn btn--secondary">
+          Cancel
+        </a>
+        <button type="submit" class="btn btn--primary">
+          Save Changes
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

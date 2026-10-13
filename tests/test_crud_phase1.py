@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import User
-from apps.tickets.models import Ticket, TicketReply
+from apps.tickets.models import Ticket, TicketReply, Company
 from apps.solutions.models import Article, Category
 from apps.core.models import ActivityLog, Notification
 
@@ -602,3 +602,86 @@ class TestDashboardCore:
         resp = Client().get(reverse("core:healthz"))
         assert resp.status_code == 200
         assert resp.json()["status"] == "ok"
+
+
+# ═══════════════════════════════════════════════════════════════
+# COMPANIES CRUD (ADMIN ONLY)
+# ═══════════════════════════════════════════════════════════════
+
+class TestCompanyCRUD:
+    def test_company_list_requires_admin(self, agent_client):
+        resp = agent_client.get(reverse("tickets:company_list"))
+        assert resp.status_code == 403
+
+    def test_company_list_loads_for_admin(self, auth_client):
+        resp = auth_client.get(reverse("tickets:company_list"))
+        assert resp.status_code == 200
+
+    def test_company_create(self, auth_client):
+        resp = auth_client.post(reverse("tickets:company_list"), {
+            "name": "PT Sumber Alfaria",
+            "code": "ALFA",
+            "contact_person": "Joko",
+            "contact_phone": "0812345678",
+            "address": "Tangerang",
+            "is_active": "on",
+        })
+        assert resp.status_code == 302
+        c = Company.objects.filter(name="PT Sumber Alfaria").first()
+        assert c is not None
+        assert c.code == "ALFA"
+        assert c.is_active is True
+
+    def test_company_edit(self, auth_client):
+        c = Company.objects.create(name="Old Partner", code="OLD", is_active=True)
+        resp = auth_client.post(reverse("tickets:company_edit", args=[c.pk]), {
+            "name": "Updated Partner",
+            "code": "UPD",
+            "contact_person": "Budi",
+            "contact_phone": "08999999",
+            "address": "Jakarta",
+            "is_active": "on",
+        })
+        assert resp.status_code == 302
+        c.refresh_from_db()
+        assert c.name == "Updated Partner"
+        assert c.code == "UPD"
+
+    def test_company_toggle(self, auth_client):
+        c = Company.objects.create(name="Toggle Co", is_active=True)
+        resp = auth_client.post(reverse("tickets:company_toggle", args=[c.pk]))
+        assert resp.status_code == 302
+        c.refresh_from_db()
+        assert c.is_active is False
+
+        # Toggle back
+        auth_client.post(reverse("tickets:company_toggle", args=[c.pk]))
+        c.refresh_from_db()
+        assert c.is_active is True
+
+    def test_company_delete_zero_tickets(self, auth_client):
+        c = Company.objects.create(name="Deleteable Co", is_active=True)
+        resp = auth_client.post(reverse("tickets:company_delete", args=[c.pk]))
+        assert resp.status_code == 302
+        assert not Company.objects.filter(pk=c.pk).exists()
+
+    def test_company_delete_prevented_if_tickets_exist(self, auth_client, admin_user):
+        c = Company.objects.create(name="Has Tickets Co", is_active=True)
+        Ticket.objects.create(
+            ticket_type="PR",
+            problem_category="los",
+            company=c.name,
+            subject="Ticket for co",
+            description="Desc",
+            requester_name="Test",
+            requester_phone="081234567890",
+            source="nms",
+            priority="medium",
+            status="open",
+            opened_at=timezone.now(),
+            created_by=admin_user,
+        )
+        resp = auth_client.post(reverse("tickets:company_delete", args=[c.pk]))
+        assert resp.status_code == 302
+        # Company should still exist
+        assert Company.objects.filter(pk=c.pk).exists()

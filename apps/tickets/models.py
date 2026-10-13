@@ -74,8 +74,46 @@ class TicketQuerySet(models.QuerySet):
         return moved
 
 
+class Company(models.Model):
+    """Corporate / client entity. Admin can manage companies dynamically."""
+    name = models.CharField("name", max_length=120, unique=True)
+    code = models.CharField("code", max_length=32, blank=True, help_text="Short code / abbreviation")
+    contact_person = models.CharField("contact person", max_length=120, blank=True)
+    contact_phone = models.CharField("contact phone", max_length=32, blank=True)
+    address = models.TextField("address", blank=True)
+    is_active = models.BooleanField("active", default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "company"
+        verbose_name_plural = "companies"
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def ticket_count(self):
+        return Ticket.objects.filter(company=self.name).count()
+
+
 class Ticket(TimeStampedModel):
-    """Satu tiket gangguan (Problem) atau permintaan fitur (Feature Request)."""
+    """Satu tiket gangguan (Problem), permintaan fitur (Feature Request), atau relokasi (Relocation)."""
+
+    DEFAULT_COMPANIES = [
+        "ITID",
+        "Mitseri",
+        "PT.LION EXPRESS",
+        "CHINA CONSTRUCTION INDUSTRIAL & ENGINEERING",
+        "PT SURYA FAJAR INDONESIA",
+        "PT ANUGERAH PANCA LAKSANA",
+        "TS Tech",
+        "PT VIRTUS FACILITY SERVICE",
+        "INITECH",
+        "BADAN PUSAT STATISTIK",
+        "Anter Aja",
+    ]
 
     # Aturan waktu (bisa ditimpa lewat settings TICKET_AUTO_OUTSTANDING_MINUTES /
     # TICKET_CLOSED_EDIT_MINUTES)
@@ -111,6 +149,7 @@ class Ticket(TimeStampedModel):
         LOS = "los", "Internet LOS"
         OTHER = "other", "Other"
 
+    # Backward compatibility alias
     class CompanyChoices(models.TextChoices):
         ITID = "ITID", "ITID"
         MITSERI = "Mitseri", "Mitseri"
@@ -143,7 +182,7 @@ class Ticket(TimeStampedModel):
     requester_name = models.CharField("pelapor", max_length=120)
     requester_email = models.EmailField("email pelapor", blank=True)
     requester_phone = models.CharField("nomor telepon", max_length=20)
-    company = models.CharField("perusahaan / unit", max_length=120, choices=CompanyChoices.choices)
+    company = models.CharField("perusahaan / unit", max_length=120, db_index=True)
     address = models.TextField("alamat", blank=True, help_text="Alamat saat pembuatan tiket relokasi.")
     site_code = models.CharField("kode site", max_length=32, blank=True, db_index=True)
 

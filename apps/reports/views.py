@@ -112,13 +112,21 @@ def _report_context(request):
 
 @login_required
 def export_page(request):
+    from apps.tickets.models import Company
+    try:
+        company_choices = list(Company.objects.filter(is_active=True).order_by("name").values_list("name", "name"))
+        if not company_choices:
+            company_choices = [(c, c) for c in Ticket.DEFAULT_COMPANIES]
+    except Exception:
+        company_choices = [(c, c) for c in Ticket.DEFAULT_COMPANIES]
+
     ctx = _report_context(request)
     ctx.update({
         "page_title": "Analytics & Export",
         "breadcrumb": [("Analytics & Export", None)],
         "presets": periods.PRESETS,
         "period_choices": ReportExport.Period.choices,
-        "companies": Ticket.CompanyChoices.choices,
+        "companies": company_choices,
         "preview": ctx["tickets"][:12],
         "has_rc": any(t.ticket_type == Ticket.Type.RELOCATION for t in ctx["tickets"]),
         "history": ReportExport.objects.select_related("created_by")[:8],

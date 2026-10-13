@@ -3,7 +3,7 @@ from django.utils import timezone
 
 from apps.accounts.models import User
 
-from .models import Ticket, TicketReply
+from .models import Ticket, TicketReply, Company
 
 GROUPS = [
     ("NOC", "NOC"),
@@ -12,6 +12,22 @@ GROUPS = [
     ("Helpdesk", "Helpdesk"),
     ("Product", "Product"),
 ]
+
+
+class CompanyForm(forms.ModelForm):
+    """Form to create and edit corporate clients."""
+
+    class Meta:
+        model = Company
+        fields = ["name", "code", "contact_person", "contact_phone", "address", "is_active"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-input", "placeholder": "e.g. PT Telekomunikasi Indonesia"}),
+            "code": forms.TextInput(attrs={"class": "form-input", "placeholder": "e.g. TELKOM"}),
+            "contact_person": forms.TextInput(attrs={"class": "form-input", "placeholder": "PIC Name"}),
+            "contact_phone": forms.TextInput(attrs={"class": "form-input", "placeholder": "08xxxxxxxxxx"}),
+            "address": forms.Textarea(attrs={"class": "form-textarea", "rows": 3, "placeholder": "Office address..."}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check"}),
+        }
 
 
 class TicketForm(forms.ModelForm):
@@ -43,6 +59,23 @@ class TicketForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        # Dynamic company choices from Company table
+        company_choices = [("", "Select company...")]
+        try:
+            db_companies = list(Company.objects.filter(is_active=True).order_by("name").values_list("name", "name"))
+            if not db_companies:
+                db_companies = [(c, c) for c in Ticket.DEFAULT_COMPANIES]
+            company_choices.extend(db_companies)
+        except Exception:
+            company_choices.extend([(c, c) for c in Ticket.DEFAULT_COMPANIES])
+
+        if self.instance and getattr(self.instance, "company", None):
+            val = self.instance.company
+            if not any(c[0] == val for c in company_choices):
+                company_choices.append((val, val))
+
+        self.fields["company"].choices = company_choices
 
         for name, field in self.fields.items():
             widget = field.widget
