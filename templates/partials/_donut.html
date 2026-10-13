@@ -9,8 +9,8 @@
   <div class="chart-donut">
     <svg width="{{ donut.size }}" height="{{ donut.size }}"
          viewBox="0 0 {{ donut.size }} {{ donut.size }}"
-         role="img" aria-label="Sebaran status tiket">
-      <title>Sebaran status tiket: total {{ donut.total }} tiket</title>
+         role="img" aria-label="Ticket status distribution">
+      <title>Ticket status distribution: total {{ donut.total }} tickets</title>
 
       {% if donut.is_empty %}
         <circle cx="{{ donut.center }}" cy="{{ donut.center }}" r="{{ donut.radius }}"
@@ -24,7 +24,7 @@
                       fill="none" stroke="{{ seg.color }}" stroke-width="{{ donut.stroke }}"
                       stroke-dasharray="{{ seg.dash }} {{ seg.gap }}"
                       stroke-dashoffset="{{ seg.offset }}">
-                <title>{{ seg.label }}: {{ seg.value }} tiket ({{ seg.percent }}%)</title>
+                <title>{{ seg.label }}: {{ seg.value }} tickets ({{ seg.percent }}%)</title>
               </circle>
             {% endif %}
           {% endfor %}
@@ -34,7 +34,7 @@
 
     <div class="chart-donut__center">
       <span class="chart-donut__total">{{ donut.total }}</span>
-      <span class="chart-donut__caption">Total tiket</span>
+      <span class="chart-donut__caption">Total Tickets</span>
     </div>
   </div>
 

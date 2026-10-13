@@ -2,8 +2,7 @@
 
 {% block page_desc %}
   <p class="page-header__desc">
-    Katalog komponen dan warna. Semua halaman berikutnya memakai elemen dari
-    sini supaya tampilan tetap seragam.
+    Component catalog and design tokens. All application views consume these elements for UI consistency.
   </p>
 {% endblock %}
 
@@ -13,24 +12,24 @@
   <div class="card">
     <div class="card__header">
       <div>
-        <div class="card__title">Palet Warna</div>
-        <div class="card__subtitle">Diambil dari logo {{ COMPANY_SHORT }}</div>
+        <div class="card__title">Color Palette</div>
+        <div class="card__subtitle">Derived from {{ COMPANY_SHORT }} branding</div>
       </div>
     </div>
     <div class="card__body">
       <div class="swatches">
         <div class="swatch"><span style="background:var(--navy-800)"></span>
           <strong>Navy 800</strong><code>#16294F</code>
-          <em>Sidebar, judul</em></div>
+          <em>Sidebar, headings</em></div>
         <div class="swatch"><span style="background:var(--navy-600)"></span>
           <strong>Navy 600</strong><code>#24457C</code>
-          <em>Tombol utama</em></div>
+          <em>Primary action</em></div>
         <div class="swatch"><span style="background:var(--teal-600)"></span>
           <strong>Teal 600</strong><code>#0F7F79</code>
-          <em>Aksi sekunder</em></div>
+          <em>Secondary action</em></div>
         <div class="swatch"><span style="background:var(--teal-400)"></span>
           <strong>Teal 400</strong><code>#35C4BC</code>
-          <em>Indikator aktif</em></div>
+          <em>Active indicator</em></div>
         <div class="swatch"><span style="background:var(--danger)"></span>
           <strong>Danger</strong><code>#B42318</code>
           <em>Critical / down</em></div>
@@ -39,32 +38,31 @@
           <em>Resolved / up</em></div>
       </div>
       <p class="form-help mt-2">
-        Teal terang hanya untuk garis dan indikator, tidak untuk teks — kontrasnya
-        kurang di atas latar putih. Untuk teks dan tombol dipakai Teal 600.
+        Bright teal is reserved for lines and active indicators, not body text due to low contrast on white. Teal 600 is used for text links and buttons.
       </p>
     </div>
   </div>
 
   {# ── Tombol ─────────────────────────────────────────────────────────── #}
   <div class="card">
-    <div class="card__header"><div class="card__title">Tombol</div></div>
+    <div class="card__header"><div class="card__title">Buttons</div></div>
     <div class="card__body">
       <div class="row row--wrap mb-3">
-        <button class="btn btn--primary">Simpan Tiket</button>
-        <button class="btn btn--secondary">Batal</button>
+        <button class="btn btn--primary">Save Ticket</button>
+        <button class="btn btn--secondary">Cancel</button>
         <button class="btn btn--accent">Export Excel</button>
-        <button class="btn btn--danger">Hapus</button>
+        <button class="btn btn--danger">Delete</button>
         <button class="btn btn--ghost">Reset Filter</button>
-        <button class="btn btn--primary" disabled>Nonaktif</button>
+        <button class="btn btn--primary" disabled>Disabled</button>
       </div>
       <div class="row row--wrap">
-        <button class="btn btn--primary btn--sm">Kecil</button>
+        <button class="btn btn--primary btn--sm">Small</button>
         <button class="btn btn--primary">Normal</button>
-        <button class="btn btn--primary btn--lg">Besar</button>
+        <button class="btn btn--primary btn--lg">Large</button>
         <div class="btn-group">
-          <button class="btn btn--secondary btn--sm">Hari Ini</button>
-          <button class="btn btn--secondary btn--sm">7 Hari</button>
-          <button class="btn btn--secondary btn--sm">30 Hari</button>
+          <button class="btn btn--secondary btn--sm">Today</button>
+          <button class="btn btn--secondary btn--sm">7 Days</button>
+          <button class="btn btn--secondary btn--sm">30 Days</button>
         </div>
       </div>
     </div>
@@ -74,8 +72,8 @@
   <div class="card">
     <div class="card__header">
       <div>
-        <div class="card__title">Lencana Status</div>
-        <div class="card__subtitle">Sejalan dengan tingkat severity Zabbix</div>
+        <div class="card__title">Status Badges</div>
+        <div class="card__subtitle">Aligned with severity metrics</div>
       </div>
     </div>
     <div class="card__body">
@@ -106,8 +104,8 @@
   <div class="card">
     <div class="card__header">
       <div>
-        <div class="card__title">Tabel Data</div>
-        <div class="card__subtitle">Contoh bentuk daftar tiket nantinya</div>
+        <div class="card__title">Data Table</div>
+        <div class="card__subtitle">Example layout for ticket listings</div>
       </div>
       <div class="card__actions">
         <button class="btn btn--secondary btn--sm">Filter</button>
@@ -119,8 +117,8 @@
         <table class="table">
           <thead>
             <tr>
-              <th>No. Tiket</th><th>Site</th><th>Tipe</th><th>Problem</th>
-              <th>Open</th><th>Close</th><th class="num">Durasi</th><th>Status</th>
+              <th>Ticket ID</th><th>Site</th><th>Type</th><th>Problem</th>
+              <th>Open</th><th>Close</th><th class="num">Duration</th><th>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -128,27 +126,27 @@
               <td><span class="ticket-no">TKT-202609-0042</span></td>
               <td><span class="site-code">CKGK0</span></td>
               <td><span class="badge badge--neutral">Problem</span></td>
-              <td>Link down — putus fiber</td>
+              <td>Link down — fiber cut</td>
               <td class="num">08/09/2026 03:12</td>
               <td class="num muted">—</td>
-              <td class="num">4j 20m</td>
+              <td class="num">4h 20m</td>
               <td><span class="badge badge--danger"><span class="badge__dot"></span>Open</span></td>
             </tr>
             <tr>
               <td><span class="ticket-no">TKT-202609-0041</span></td>
               <td><span class="site-code">CKGK1</span></td>
-              <td><span class="badge badge--teal">Relokasi</span></td>
-              <td>Pemindahan perangkat ke rak baru</td>
+              <td><span class="badge badge--teal">Relocation</span></td>
+              <td>Relocating device to new rack</td>
               <td class="num">07/09/2026 09:00</td>
               <td class="num">07/09/2026 14:30</td>
-              <td class="num">5j 30m</td>
+              <td class="num">5h 30m</td>
               <td><span class="badge badge--ok">Resolved</span></td>
             </tr>
             <tr>
               <td><span class="ticket-no">TKT-202609-0040</span></td>
               <td><span class="site-code">CKGK0</span></td>
-              <td><span class="badge badge--info">CKG</span></td>
-              <td>Pengecekan berkala perangkat</td>
+              <td><span class="badge badge--info">FR</span></td>
+              <td>Periodic device inspection</td>
               <td class="num">06/09/2026 10:15</td>
               <td class="num">06/09/2026 11:05</td>
               <td class="num">50m</td>
@@ -159,92 +157,92 @@
       </div>
     </div>
     <div class="card__footer">
-      <span>Menampilkan 3 dari 3 data</span>
+      <span>Showing 3 of 3 entries</span>
       <span class="spacer"></span>
-      <span>Contoh statis — bukan data sungguhan</span>
+      <span>Static preview — sample data</span>
     </div>
   </div>
 
   {# ── Form ───────────────────────────────────────────────────────────── #}
   <div class="grid grid--2 mt-4">
     <div class="card" style="margin-top:0">
-      <div class="card__header"><div class="card__title">Elemen Form</div></div>
+      <div class="card__header"><div class="card__title">Form Elements</div></div>
       <div class="card__body">
         <div class="form-row">
-          <label class="form-label" for="sg-site">Kode Site<span class="req">*</span></label>
+          <label class="form-label" for="sg-site">Site Code<span class="req">*</span></label>
           <select class="form-select" id="sg-site">
-            <option>Pilih site…</option>
+            <option>Select site…</option>
             <option>CKGK0 — Cikarang Kota 0</option>
             <option>CKGK1 — Cikarang Kota 1</option>
           </select>
-          <div class="form-help">Daftar site ditarik otomatis dari Zabbix.</div>
+          <div class="form-help">Site list pulled automatically.</div>
         </div>
         <div class="form-row">
-          <label class="form-label" for="sg-open">Waktu Open<span class="req">*</span></label>
+          <label class="form-label" for="sg-open">Opened Time<span class="req">*</span></label>
           <input type="datetime-local" class="form-input" id="sg-open">
         </div>
         <div class="form-row has-error">
           <label class="form-label" for="sg-prob">Problem<span class="req">*</span></label>
           <textarea class="form-textarea" id="sg-prob"
-                    placeholder="Jelaskan gangguan yang terjadi…"></textarea>
-          <div class="form-error">Contoh tampilan error — kolom ini wajib diisi.</div>
+                    placeholder="Describe the issue observed…"></textarea>
+          <div class="form-error">Sample error state — this field is required.</div>
         </div>
       </div>
     </div>
 
     <div class="card" style="margin-top:0">
-      <div class="card__header"><div class="card__title">Pilihan Khusus</div></div>
+      <div class="card__header"><div class="card__title">Custom Selectors</div></div>
       <div class="card__body">
         <div class="form-row">
-          <span class="form-label">Tipe Tiket</span>
+          <span class="form-label">Ticket Type</span>
           <div class="choice-cards">
             <label class="choice-card">
               <input type="radio" name="sg-tipe" checked>
               <span class="choice-card__box">
                 <span class="choice-card__title">Problem</span>
-                <span class="choice-card__desc">Gangguan harian</span>
+                <span class="choice-card__desc">Daily incidents</span>
               </span>
             </label>
             <label class="choice-card">
               <input type="radio" name="sg-tipe">
               <span class="choice-card__box">
-                <span class="choice-card__title">CKG</span>
-                <span class="choice-card__desc">Khusus, jarang</span>
+                <span class="choice-card__title">Feature Request</span>
+                <span class="choice-card__desc">Enhancements</span>
               </span>
             </label>
             <label class="choice-card">
               <input type="radio" name="sg-tipe">
               <span class="choice-card__box">
-                <span class="choice-card__title">Relokasi</span>
-                <span class="choice-card__desc">Khusus, jarang</span>
+                <span class="choice-card__title">Relocation</span>
+                <span class="choice-card__desc">Site moves / dismantles</span>
               </span>
             </label>
           </div>
         </div>
 
         <div class="form-row mt-3">
-          <span class="form-label">Periode Laporan</span>
+          <span class="form-label">Report Period</span>
           <div class="segmented">
             <span class="segmented__item">
               <input type="radio" name="sg-periode" id="sg-p1" checked>
-              <label class="segmented__label" for="sg-p1">Per 4 Jam</label>
+              <label class="segmented__label" for="sg-p1">Shift</label>
             </span>
             <span class="segmented__item">
               <input type="radio" name="sg-periode" id="sg-p2">
-              <label class="segmented__label" for="sg-p2">Harian</label>
+              <label class="segmented__label" for="sg-p2">Daily</label>
             </span>
             <span class="segmented__item">
               <input type="radio" name="sg-periode" id="sg-p3">
-              <label class="segmented__label" for="sg-p3">Bulanan</label>
+              <label class="segmented__label" for="sg-p3">Monthly</label>
             </span>
           </div>
-          <div class="form-help">Dipakai di halaman Export Excel (Fase 4).</div>
+          <div class="form-help">Used on the Excel export screen.</div>
         </div>
 
         <div class="form-actions">
           <span class="form-actions__spacer"></span>
-          <button class="btn btn--secondary">Batal</button>
-          <button class="btn btn--primary">Simpan</button>
+          <button class="btn btn--secondary">Cancel</button>
+          <button class="btn btn--primary">Save</button>
         </div>
       </div>
     </div>
@@ -252,28 +250,28 @@
 
   {# ── Pesan ──────────────────────────────────────────────────────────── #}
   <div class="card">
-    <div class="card__header"><div class="card__title">Pesan Sistem</div></div>
+    <div class="card__header"><div class="card__title">System Messages</div></div>
     <div class="card__body">
       <div class="alert alert--success">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="10" cy="10" r="7.5"/><path d="m6.8 10.2 2.2 2.2 4.2-4.6"/>
         </svg>
-        <div class="alert__body">Tiket TKT-202609-0042 berhasil disimpan.</div>
+        <div class="alert__body">Ticket TKT-202609-0042 saved successfully.</div>
       </div>
       <div class="alert alert--warning">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="10" cy="10" r="7.5"/><path d="M10 6.3v4.4"/><path d="M10 13.4h.01"/>
         </svg>
-        <div class="alert__body">Sinkronisasi Zabbix terakhir 3 jam lalu.</div>
+        <div class="alert__body">Last sync completed 3 hours ago.</div>
       </div>
       <div class="alert alert--error" style="margin-bottom:0">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="10" cy="10" r="7.5"/><path d="M10 6.3v4.4"/><path d="M10 13.4h.01"/>
         </svg>
-        <div class="alert__body">Gagal terhubung ke Zabbix: connection timeout.</div>
+        <div class="alert__body">Failed to connect to service: connection timeout.</div>
       </div>
     </div>
   </div>

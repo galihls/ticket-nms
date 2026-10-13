@@ -4,16 +4,16 @@
 {% block page_desc %}
   <p class="page-header__desc">
     {% if is_edit %}
-      Perubahan tercatat pada riwayat tiket.
+      Changes will be recorded in the ticket history.
     {% else %}
-      Nomor tiket dibuat otomatis saat disimpan — tidak perlu diisi manual.
+      Ticket number is generated automatically upon saving — no manual entry required.
     {% endif %}
   </p>
 {% endblock %}
 
 {% block page_actions %}
   <a href="{% if is_edit %}{{ ticket.get_absolute_url }}{% else %}{% url 'tickets:list' %}{% endif %}"
-     class="btn btn--secondary">Batal</a>
+     class="btn btn--secondary">Cancel</a>
 {% endblock %}
 
 {% block content %}
@@ -30,8 +30,8 @@
             <circle cx="10" cy="10" r="7.5"/><path d="M10 6.3v4.4"/><path d="M10 13.4h.01"/>
           </svg>
           <div class="alert__body">
-            <div class="alert__title">Ada isian yang perlu diperbaiki</div>
-            Periksa kembali kolom yang ditandai merah di bawah.
+            <div class="alert__title">Please correct the highlighted errors</div>
+            Please review the fields marked in red below.
           </div>
         </div>
       {% endif %}
@@ -39,7 +39,7 @@
       {% if source_ticket %}
         <div class="alert alert--info">
           <div class="alert__body">
-            Melanjutkan dari tiket <strong>{{ source_ticket.number }}</strong>.
+            Continuing from ticket <strong>{{ source_ticket.number }}</strong>.
           </div>
         </div>
       {% endif %}
@@ -48,12 +48,12 @@
       <div class="card">
         <div class="card__header">
           <div>
-            <div class="card__title">Tipe Tiket</div>
-            <div class="card__subtitle">Menentukan kode pada nomor tiket</div>
+            <div class="card__title">Ticket Type</div>
+            <div class="card__subtitle">Determines the code prefix in the ticket number</div>
           </div>
         </div>
         <div class="card__body">
-          <div class="choice-cards" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+          <div class="choice-cards" style="grid-template-columns:repeat(3,minmax(0,1fr))">
             {% for radio in form.ticket_type %}
               <label class="choice-card">
                 {{ radio.tag }}
@@ -64,6 +64,12 @@
                            stroke-linecap="round" stroke-linejoin="round" width="17" height="17"
                            aria-hidden="true">
                         <path d="M10 2.8 2.8 16.2h14.4L10 2.8Z"/><path d="M10 8v3.4M10 13.6h.01"/>
+                      </svg>
+                    {% elif radio.data.value == "RC" %}
+                      <svg viewBox="0 0 20 20" fill="none" stroke="var(--warn)" stroke-width="1.7"
+                           stroke-linecap="round" stroke-linejoin="round" width="17" height="17"
+                           aria-hidden="true">
+                        <path d="M14 3l3 3-3 3M17 6H7a4 4 0 0 0-4 4M6 17l-3-3 3-3M3 14h10a4 4 0 0 0 4-4"/>
                       </svg>
                     {% else %}
                       <svg viewBox="0 0 20 20" fill="none" stroke="var(--teal-600)" stroke-width="1.7"
@@ -81,9 +87,11 @@
                   </span>
                   <span class="choice-card__desc">
                     {% if radio.data.value == "PR" %}
-                      Gangguan pada layanan atau perangkat yang perlu ditangani.
+                      Service disruptions or hardware incidents requiring technical resolution.
+                    {% elif radio.data.value == "RC" %}
+                      Device relocation or dismantling.
                     {% else %}
-                      Permintaan fitur atau penyesuaian baru pada sistem.
+                      New feature requests or adjustments to the system.
                     {% endif %}
                   </span>
                 </span>
@@ -96,12 +104,29 @@
       {# ── Isi tiket ─────────────────────────────────────────────────── #}
       <div class="card">
         <div class="card__header">
-          <div class="card__title">Detail Tiket</div>
+          <div class="card__title">Ticket Details</div>
         </div>
         <div class="card__body">
+          <div id="problem-fields" class="form-grid" style="margin-bottom: 16px;">
+            <div class="form-row {% if form.problem_category.errors %}has-error{% endif %}">
+              <label class="form-label" for="{{ form.problem_category.id_for_label }}">
+                Problem Category<span class="req">*</span>
+              </label>
+              {{ form.problem_category }}
+              {% for error in form.problem_category.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="form-row {% if form.problem_detail.errors %}has-error{% endif %}" id="problem-detail-row">
+              <label class="form-label" for="{{ form.problem_detail.id_for_label }}">
+                Category Detail<span class="req" id="problem-detail-req" style="display:none">*</span>
+              </label>
+              {{ form.problem_detail }}
+              {% for error in form.problem_detail.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
+            </div>
+          </div>
+
           <div class="form-row {% if form.subject.errors %}has-error{% endif %}">
             <label class="form-label" for="{{ form.subject.id_for_label }}">
-              {{ form.subject.label }}<span class="req">*</span>
+              Subject<span class="req">*</span>
             </label>
             {{ form.subject }}
             {% for error in form.subject.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
@@ -109,79 +134,43 @@
 
           <div class="form-row {% if form.description.errors %}has-error{% endif %}">
             <label class="form-label" for="{{ form.description.id_for_label }}">
-              {{ form.description.label }}
+              Description<span class="req">*</span>
             </label>
             {{ form.description }}
             {% for error in form.description.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
           </div>
 
+          <div class="form-row {% if form.address.errors %}has-error{% endif %}" id="address-field-row" style="display:none">
+            <label class="form-label" for="{{ form.address.id_for_label }}">
+              Origin Address<span class="req">*</span>
+            </label>
+            {{ form.address }}
+            <div class="form-help">Current incident location / origin address for relocation.</div>
+            {% for error in form.address.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
+          </div>
+
           <div class="form-grid">
-            <div class="form-row {% if form.requester_name.errors %}has-error{% endif %}">
-              <label class="form-label" for="{{ form.requester_name.id_for_label }}">
-                {{ form.requester_name.label }}<span class="req">*</span>
-              </label>
-              {{ form.requester_name }}
-              {% for error in form.requester_name.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
-            </div>
-
-            <div class="form-row {% if form.requester_email.errors %}has-error{% endif %}">
-              <label class="form-label" for="{{ form.requester_email.id_for_label }}">
-                {{ form.requester_email.label }}
-              </label>
-              {{ form.requester_email }}
-              {% for error in form.requester_email.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
-            </div>
-
             <div class="form-row">
               <label class="form-label" for="{{ form.company.id_for_label }}">
-                {{ form.company.label }}
+                Company / Unit<span class="req">*</span>
               </label>
               {{ form.company }}
             </div>
-
+            
             <div class="form-row">
-              <label class="form-label" for="{{ form.site_code.id_for_label }}">
-                {{ form.site_code.label }}
+              <label class="form-label" for="{{ form.requester_phone.id_for_label }}">
+                Phone Number (PIC)<span class="req">*</span>
               </label>
-              {{ form.site_code }}
-              <div class="form-help">Diisi otomatis dari Zabbix setelah integrasi aktif.</div>
+              {{ form.requester_phone }}
+              {% for error in form.requester_phone.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
             </div>
 
             <div class="form-row span-full">
               <label class="form-label" for="{{ form.tags.id_for_label }}">
-                {{ form.tags.label }}
+                Tags
               </label>
               {{ form.tags }}
               <div class="form-help">{{ form.tags.help_text }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {# ── Waktu penanganan ──────────────────────────────────────────── #}
-      <div class="card">
-        <div class="card__header">
-          <div>
-            <div class="card__title">Waktu Penanganan</div>
-            <div class="card__subtitle">Dipakai menghitung durasi pada laporan</div>
-          </div>
-        </div>
-        <div class="card__body">
-          <div class="form-grid">
-            <div class="form-row {% if form.opened_at.errors %}has-error{% endif %}">
-              <label class="form-label" for="{{ form.opened_at.id_for_label }}">
-                {{ form.opened_at.label }}<span class="req">*</span>
-              </label>
-              {{ form.opened_at }}
-              {% for error in form.opened_at.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
-            </div>
-
-            <div class="form-row {% if form.due_at.errors %}has-error{% endif %}">
-              <label class="form-label" for="{{ form.due_at.id_for_label }}">
-                {{ form.due_at.label }}
-              </label>
-              {{ form.due_at }}
-              {% for error in form.due_at.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
             </div>
           </div>
         </div>
@@ -193,65 +182,52 @@
       {# Pratinjau nomor: format [Tahun][Kode][NomorUrut] #}
       <div class="card">
         <div class="card__header">
-          <div class="card__title">Nomor Tiket</div>
+          <div class="card__title">Ticket Number</div>
         </div>
         <div class="card__body" style="text-align:center">
           <div class="ticket-no" style="font-size:26px;letter-spacing:.04em">
             {{ number_preview }}
           </div>
           <div class="text-xs muted mt-1">
-            {% if is_edit %}Nomor tetap setelah tiket dibuat{% else %}Nomor berikutnya yang tersedia{% endif %}
+            {% if is_edit %}Permanent number after ticket creation{% else %}Next available sequence number{% endif %}
           </div>
 
           <hr class="divider">
 
           <div class="text-xs muted" style="text-align:left;line-height:1.7">
-            Format <span class="mono strong">[Tahun][Kode][Urut]</span><br>
-            <span class="mono">{% now "y" %}</span> — tahun berjalan<br>
+            Format <span class="mono strong">[Year][Code][Sequence]</span><br>
+            <span class="mono">{% now "y" %}</span> — current year<br>
             <span class="mono">PR</span> — Problem ·
+            <span class="mono">RC</span> — Relocation ·
             <span class="mono">FR</span> — Feature Request<br>
-            <span class="mono">0001</span> — nomor urut per tahun
+            <span class="mono">0001</span> — sequence number per year
           </div>
         </div>
       </div>
 
       <div class="card">
         <div class="card__header">
-          <div class="card__title">Penugasan</div>
+          <div class="card__title">Assignment &amp; Properties</div>
         </div>
         <div class="card__body">
           <div class="props">
             <div class="props__field">
               <label class="props__label" for="{{ form.status.id_for_label }}">
-                {{ form.status.label }}
+                Status
               </label>
               {{ form.status }}
             </div>
 
             <div class="props__field">
               <label class="props__label" for="{{ form.priority.id_for_label }}">
-                {{ form.priority.label }}
+                Level
               </label>
               {{ form.priority }}
             </div>
 
             <div class="props__field">
-              <label class="props__label" for="{{ form.assignee.id_for_label }}">
-                {{ form.assignee.label }}
-              </label>
-              {{ form.assignee }}
-            </div>
-
-            <div class="props__field">
-              <label class="props__label" for="{{ form.group.id_for_label }}">
-                {{ form.group.label }}
-              </label>
-              {{ form.group }}
-            </div>
-
-            <div class="props__field">
               <label class="props__label" for="{{ form.source.id_for_label }}">
-                {{ form.source.label }}
+                Source
               </label>
               {{ form.source }}
             </div>
@@ -262,13 +238,96 @@
       <div class="card">
         <div class="card__body">
           <button type="submit" class="btn btn--primary btn--lg btn--block">
-            {% if is_edit %}Simpan Perubahan{% else %}Buat Tiket{% endif %}
+            {% if is_edit %}Save Changes{% else %}Create Ticket{% endif %}
           </button>
           <a href="{% if is_edit %}{{ ticket.get_absolute_url }}{% else %}{% url 'tickets:list' %}{% endif %}"
-             class="btn btn--ghost btn--block mt-1">Batal</a>
+             class="btn btn--ghost btn--block mt-1">Cancel</a>
         </div>
       </div>
     </aside>
   </div>
 </form>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const typeRadios = document.querySelectorAll('input[name="ticket_type"]');
+  const catSelect = document.getElementById('id_problem_category');
+  const probFields = document.getElementById('problem-fields');
+  const probDetailRow = document.getElementById('problem-detail-row');
+  const probDetailReq = document.getElementById('problem-detail-req');
+  const addressRow = document.getElementById('address-field-row');
+  const ticketNoEl = document.querySelector('.ticket-no');
+  const isEdit = {% if is_edit %}true{% else %}false{% endif %};
+  const previewNumbers = {{ preview_numbers|default:"{}"|safe }};
+
+  const prioritySelect = document.getElementById('id_priority');
+  const allPriorityOptions = [
+    { value: 'low', text: 'Low' },
+    { value: 'medium', text: 'Medium' },
+    { value: 'high', text: 'High' }
+  ];
+
+  function updatePriorityOptions(type) {
+    if (!prioritySelect) return;
+    const currentVal = prioritySelect.value;
+    let allowed = ['low', 'medium', 'high'];
+    if (type === 'FR') {
+      allowed = ['medium', 'high'];
+    } else if (type === 'RC') {
+      allowed = ['medium'];
+    }
+
+    prioritySelect.innerHTML = '';
+    allPriorityOptions.forEach(opt => {
+      if (allowed.includes(opt.value)) {
+        const optionEl = document.createElement('option');
+        optionEl.value = opt.value;
+        optionEl.textContent = opt.text;
+        prioritySelect.appendChild(optionEl);
+      }
+    });
+
+    if (allowed.includes(currentVal)) {
+      prioritySelect.value = currentVal;
+    } else {
+      prioritySelect.value = 'medium';
+    }
+  }
+
+  function updateVisibility() {
+    const selectedType = document.querySelector('input[name="ticket_type"]:checked')?.value || 'PR';
+    const isProblem = selectedType === 'PR';
+    const isRelocation = selectedType === 'RC';
+
+    // Update Priority / Level options based on ticket type
+    updatePriorityOptions(selectedType);
+
+    // Problem fields
+    if (probFields) probFields.style.display = isProblem ? 'grid' : 'none';
+
+    if (isProblem && catSelect && catSelect.value === 'other') {
+      if (probDetailRow) probDetailRow.style.display = 'block';
+      if (probDetailReq) probDetailReq.style.display = 'inline';
+    } else {
+      if (probDetailRow) probDetailRow.style.display = 'none';
+      if (probDetailReq) probDetailReq.style.display = 'none';
+    }
+
+    // Address field for Relocation
+    if (addressRow) {
+      addressRow.style.display = isRelocation ? 'block' : 'none';
+    }
+
+    // Live update ticket number preview on create page
+    if (!isEdit && ticketNoEl && previewNumbers && previewNumbers[selectedType]) {
+      ticketNoEl.textContent = previewNumbers[selectedType];
+    }
+  }
+
+  typeRadios.forEach(r => r.addEventListener('change', updateVisibility));
+  if(catSelect) catSelect.addEventListener('change', updateVisibility);
+  
+  updateVisibility();
+});
+</script>
 {% endblock %}

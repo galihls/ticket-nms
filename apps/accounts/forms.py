@@ -9,21 +9,21 @@ class LoginForm(AuthenticationForm):
 
     error_messages = {
         **AuthenticationForm.error_messages,
-        "invalid_login": "Username atau password salah. Periksa kembali.",
-        "inactive": "Akun ini tidak aktif. Hubungi administrator.",
+        "invalid_login": "Invalid username or password. Please check and try again.",
+        "inactive": "This account is inactive. Please contact an administrator.",
     }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["username"].widget.attrs.update({
             "class": "form-input",
-            "placeholder": "Masukkan username",
+            "placeholder": "Enter your username",
             "autofocus": True,
             "autocomplete": "username",
         })
         self.fields["password"].widget.attrs.update({
             "class": "form-input",
-            "placeholder": "Masukkan password",
+            "placeholder": "Enter your password",
             "autocomplete": "current-password",
         })
         self.fields["username"].label = "Username"
@@ -33,16 +33,11 @@ class LoginForm(AuthenticationForm):
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "email", "phone", "nik",
-                  "department", "position", "shift"]
+        fields = ["first_name", "last_name", "email", "nik", "position"]
         widgets = {
             "first_name": forms.TextInput(attrs={"class": "form-input"}),
             "last_name": forms.TextInput(attrs={"class": "form-input"}),
             "email": forms.EmailInput(attrs={"class": "form-input"}),
-            "phone": forms.TextInput(attrs={"class": "form-input",
-                                            "placeholder": "08xx-xxxx-xxxx"}),
             "nik": forms.TextInput(attrs={"class": "form-input"}),
-            "department": forms.TextInput(attrs={"class": "form-input"}),
             "position": forms.TextInput(attrs={"class": "form-input"}),
-            "shift": forms.Select(attrs={"class": "form-select"}),
         }

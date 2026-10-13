@@ -2,14 +2,13 @@
 
 {% block page_desc %}
   <p class="page-header__desc">
-    Tulis solusi berdasarkan isu yang sudah berhasil Anda tangani, supaya agent
-    lain tidak mulai dari nol.
+    Write solutions based on issues you've resolved, so other agents don't have to start from scratch.
   </p>
 {% endblock %}
 
 {% block page_actions %}
   <a href="{% if is_edit %}{{ article.get_absolute_url }}{% else %}{% url 'solutions:home' %}{% endif %}"
-     class="btn btn--secondary">Batal</a>
+     class="btn btn--secondary">Cancel</a>
 {% endblock %}
 
 {% block content %}
@@ -22,8 +21,8 @@
       {% if form.errors %}
         <div class="alert alert--error">
           <div class="alert__body">
-            <div class="alert__title">Ada isian yang perlu diperbaiki</div>
-            Periksa kembali kolom yang ditandai merah.
+            <div class="alert__title">Please correct the errors below</div>
+            Review the fields highlighted in red.
           </div>
         </div>
       {% endif %}
@@ -35,16 +34,15 @@
             <circle cx="10" cy="10" r="7.5"/><path d="M10 13.7V9.3"/><path d="M10 6.6h.01"/>
           </svg>
           <div class="alert__body">
-            <div class="alert__title">Dibuat dari tiket {{ source_ticket.number }}</div>
-            Judul dan isi sudah diisi awal dari tiket tersebut. Rapikan seperlunya
-            sebelum menyimpan.
+            <div class="alert__title">Created from ticket {{ source_ticket.number }}</div>
+            Title and body have been prefilled from this ticket. Adjust as needed before saving.
           </div>
         </div>
       {% endif %}
 
       <div class="card">
         <div class="card__header">
-          <div class="card__title">Isi Artikel</div>
+          <div class="card__title">Article Content</div>
         </div>
         <div class="card__body">
           <div class="form-row {% if form.title.errors %}has-error{% endif %}">
@@ -60,7 +58,7 @@
               {{ form.summary.label }}
             </label>
             {{ form.summary }}
-            <div class="form-help">Muncul pada daftar artikel dan hasil pencarian.</div>
+            <div class="form-help">Appears in article listings and search results.</div>
           </div>
 
           <div class="form-row {% if form.body.errors %}has-error{% endif %}">
@@ -70,8 +68,7 @@
             {{ form.body }}
             {% for error in form.body.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
             <div class="form-help">
-              Pisahkan paragraf dengan satu baris kosong. Baris pendek tanpa titik
-              ditampilkan sebagai sub-judul.
+              Separate paragraphs with a blank line. Short lines without a period are rendered as subheadings.
             </div>
           </div>
 
@@ -87,15 +84,15 @@
 
       <div class="card">
         <div class="card__header">
-          <div class="card__title">Kerangka yang Disarankan</div>
-          <div class="card__subtitle">Bukan keharusan — hanya urutan yang terbukti mudah dibaca</div>
+          <div class="card__title">Suggested Structure</div>
+          <div class="card__subtitle">Optional — a proven structure for readability</div>
         </div>
         <div class="card__body">
           <ol class="text-sm" style="margin:0;padding-left:20px;line-height:1.9;color:var(--ink-600)">
-            <li><span class="strong">Gejala</span> — apa yang terlihat oleh pelapor atau di monitoring.</li>
-            <li><span class="strong">Langkah pemeriksaan</span> — urutan mempersempit penyebab.</li>
-            <li><span class="strong">Solusi</span> — tindakan yang menyelesaikan masalah.</li>
-            <li><span class="strong">Catatan</span> — hal yang perlu dipantau setelahnya.</li>
+            <li><span class="strong">Symptoms</span> — what was reported or observed on monitoring.</li>
+            <li><span class="strong">Troubleshooting steps</span> — sequence to narrow down root cause.</li>
+            <li><span class="strong">Resolution</span> — actions that resolved the issue.</li>
+            <li><span class="strong">Notes</span> — things to monitor afterwards.</li>
           </ol>
         </div>
       </div>
@@ -104,18 +101,18 @@
     <aside class="stack">
       <div class="card">
         <div class="card__header">
-          <div class="card__title">Penempatan</div>
+          <div class="card__title">Placement</div>
         </div>
         <div class="card__body">
           <div class="props">
             <div class="props__field">
-              <label class="props__label" for="{{ form.folder.id_for_label }}">
-                {{ form.folder.label }}<span class="req">*</span>
+              <label class="props__label" for="{{ form.category.id_for_label }}">
+                {{ form.category.label }}<span class="req">*</span>
               </label>
-              {{ form.folder }}
-              {% for error in form.folder.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
+              {{ form.category }}
+              {% for error in form.category.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
               <div class="form-help">
-                Folder menentukan kategori artikel: Problem atau Feature Request.
+                Select whether this article belongs to Problem or Feature Request.
               </div>
             </div>
 
@@ -124,7 +121,7 @@
                 {{ form.status.label }}
               </label>
               {{ form.status }}
-              <div class="form-help">Draf hanya terlihat oleh administrator.</div>
+              <div class="form-help">Drafts are only visible to administrators.</div>
             </div>
           </div>
         </div>
@@ -133,13 +130,14 @@
       <div class="card">
         <div class="card__body">
           <button type="submit" class="btn btn--primary btn--lg btn--block">
-            {% if is_edit %}Simpan Perubahan{% else %}Terbitkan Artikel{% endif %}
+            {% if is_edit %}Save Changes{% else %}Publish Article{% endif %}
           </button>
           <a href="{% if is_edit %}{{ article.get_absolute_url }}{% else %}{% url 'solutions:home' %}{% endif %}"
-             class="btn btn--ghost btn--block mt-1">Batal</a>
+             class="btn btn--ghost btn--block mt-1">Cancel</a>
         </div>
       </div>
     </aside>
+
   </div>
 </form>
 {% endblock %}

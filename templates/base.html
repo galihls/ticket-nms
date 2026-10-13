@@ -1,5 +1,5 @@
 {% load static %}<!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -22,8 +22,8 @@
       <div class="content__inner">
 
         {% if breadcrumb %}
-          <nav class="breadcrumb" aria-label="Navigasi remah">
-            <a href="{% url 'core:dashboard' %}">Beranda</a>
+          <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="{% url 'core:dashboard' %}">Home</a>
             {% for label, url in breadcrumb %}
               <span class="breadcrumb__sep">/</span>
               {% if url %}<a href="{{ url }}">{{ label }}</a>

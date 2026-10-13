@@ -15,55 +15,35 @@ GROUPS = [
 
 
 class TicketForm(forms.ModelForm):
-    """Form buat & ubah tiket.
-
-    Nomor tiket tidak ada di form: dihasilkan otomatis saat simpan supaya
-    tidak mungkin bentrok kalau dua agent membuat tiket bersamaan.
-    """
-
-    group = forms.ChoiceField(label="Grup penanganan", choices=GROUPS, required=False)
+    """Form to create and edit tickets."""
 
     class Meta:
         model = Ticket
         fields = [
-            "ticket_type", "subject", "description", "priority", "status", "source",
-            "requester_name", "requester_email", "company", "site_code",
-            "assignee", "group", "opened_at", "due_at", "tags",
+            "ticket_type", "subject", "description", "address", "problem_category", "problem_detail",
+            "priority", "status", "source", "company", "tags", "requester_phone"
         ]
         widgets = {
             "ticket_type": forms.RadioSelect(),
             "subject": forms.TextInput(attrs={
-                "placeholder": "Ringkas dan spesifik, mis. Link down site CKGK0",
+                "placeholder": "Concise and specific, e.g. Link down site CKGK0",
             }),
             "description": forms.Textarea(attrs={
                 "rows": 7,
-                "placeholder": "Jelaskan gejala, waktu kejadian, dan langkah yang sudah dicoba…",
+                "placeholder": "Explain symptoms, time of incident, and troubleshooting steps already attempted…",
             }),
-            "requester_name": forms.TextInput(attrs={"placeholder": "Nama pelapor"}),
-            "requester_email": forms.EmailInput(attrs={"placeholder": "nama@initech.co.id"}),
-            "company": forms.TextInput(attrs={"placeholder": "Unit / perusahaan pelapor"}),
-            "site_code": forms.TextInput(attrs={"placeholder": "mis. CKGK0"}),
-            "tags": forms.TextInput(attrs={"placeholder": "link-down, fiber, prioritas"}),
-            "opened_at": forms.DateTimeInput(attrs={"type": "datetime-local"},
-                                             format="%Y-%m-%dT%H:%M"),
-            "due_at": forms.DateTimeInput(attrs={"type": "datetime-local"},
-                                          format="%Y-%m-%dT%H:%M"),
+            "address": forms.Textarea(attrs={
+                "rows": 3,
+                "placeholder": "Incident location address / origin relocation address…",
+            }),
+            "company": forms.Select(),
+            "requester_phone": forms.TextInput(attrs={"placeholder": "08xxxxxxxxx"}),
+            "tags": forms.TextInput(attrs={"placeholder": "link-down, fiber, urgent"}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.fields["assignee"].queryset = User.objects.filter(is_active=True)
-        self.fields["assignee"].label = "Person In Charge"
-        self.fields["assignee"].empty_label = "— Belum ditugaskan —"
-        self.fields["requester_email"].required = False
-
-        if not self.instance.pk:
-            self.fields["opened_at"].initial = timezone.localtime().replace(
-                second=0, microsecond=0)
-
-        # Kelas CSS dipasang di sini, bukan di template, supaya satu form bisa
-        # dipakai ulang di halaman buat maupun ubah tanpa duplikasi markup.
         for name, field in self.fields.items():
             widget = field.widget
             if isinstance(widget, forms.RadioSelect):
@@ -77,9 +57,27 @@ class TicketForm(forms.ModelForm):
 
     def clean(self):
         data = super().clean()
-        opened_at, due_at = data.get("opened_at"), data.get("due_at")
-        if opened_at and due_at and due_at < opened_at:
-            self.add_error("due_at", "Target selesai tidak boleh sebelum waktu open.")
+            
+        ticket_type = data.get("ticket_type")
+        problem_category = data.get("problem_category")
+        problem_detail = data.get("problem_detail")
+        address = data.get("address")
+        priority = data.get("priority")
+
+        if ticket_type == Ticket.Type.PROBLEM:
+            if not problem_category:
+                self.add_error("problem_category", "Problem category is required for Problem tickets.")
+            if problem_category == Ticket.ProblemCategory.OTHER and not problem_detail:
+                self.add_error("problem_detail", "Category detail is required when selecting Other.")
+        elif ticket_type == Ticket.Type.FEATURE:
+            if priority not in (Ticket.Priority.MEDIUM, Ticket.Priority.HIGH):
+                self.add_error("priority", "Feature Request only allows Level Medium or High.")
+        elif ticket_type == Ticket.Type.RELOCATION:
+            if not address:
+                self.add_error("address", "Address is required for Relocation tickets.")
+            if priority != Ticket.Priority.MEDIUM:
+                self.add_error("priority", "Relocation tickets can only have Level Medium.")
+                
         return data
 
 
@@ -90,35 +88,55 @@ class ReplyForm(forms.ModelForm):
         widgets = {
             "body": forms.Textarea(attrs={
                 "class": "form-textarea", "rows": 4,
-                "placeholder": "Tulis balasan untuk pelapor…",
+                "placeholder": "Write an internal note or reply…",
             }),
         }
-        labels = {"body": "Balasan"}
+        labels = {"body": "Internal Note"}
 
 
 class CloseTicketForm(forms.Form):
-    """Menutup tiket wajib disertai alasan — itu yang masuk ke audit trail."""
+    """Closing tickets requires a reason for audit trail purposes."""
 
     REASONS = [
-        ("Perbaikan selesai", "Perbaikan selesai"),
-        ("Tidak dapat direproduksi", "Tidak dapat direproduksi"),
-        ("Duplikat tiket lain", "Duplikat tiket lain"),
-        ("Permintaan ditolak", "Permintaan ditolak"),
-        ("Selesai oleh pelapor", "Selesai oleh pelapor"),
-        ("Lainnya", "Lainnya"),
+        ("Resolved", "Resolved"),
+        ("Duplicate ticket", "Duplicate ticket"),
+        ("Request cancelled", "Request cancelled"),
+        ("Resolved by user", "Resolved by user"),
+        ("Other", "Other"),
     ]
 
+    RELOCATION_ACTIONS = [
+        ("Relokasi", "Relocation"),
+        ("Dismantle", "Dismantle"),
+    ]
+
+    # Standard tickets (Problem / Feature)
     reason_category = forms.ChoiceField(
-        label="Kategori alasan", choices=REASONS,
+        label="Resolution category", choices=REASONS, required=False,
         widget=forms.Select(attrs={"class": "form-select"}),
     )
-    reason = forms.CharField(
-        label="Keterangan close", widget=forms.Textarea(attrs={
-            "class": "form-textarea", "rows": 3,
-            "placeholder": "Akar masalah dan tindakan yang dilakukan…",
+
+    # Relocation tickets (RC)
+    relocation_action = forms.ChoiceField(
+        label="Action", choices=RELOCATION_ACTIONS, required=False,
+        widget=forms.Select(attrs={"class": "form-select", "id": "id_relocation_action"}),
+    )
+    new_site = forms.CharField(
+        label="New site", required=False,
+        widget=forms.TextInput(attrs={"class": "form-input", "placeholder": "New site code / name…"}),
+    )
+    new_address = forms.CharField(
+        label="New address", required=False,
+        widget=forms.Textarea(attrs={
+            "class": "form-textarea", "rows": 2,
+            "placeholder": "New location address…",
         }),
     )
-    create_article = forms.BooleanField(
-        label="Jadikan bahan artikel solusi", required=False,
-        help_text="Membuka form artikel setelah tiket ditutup.",
+
+    # Closing notes
+    reason = forms.CharField(
+        label="Closing note", required=False, widget=forms.Textarea(attrs={
+            "class": "form-textarea", "rows": 3,
+            "placeholder": "Root cause or description of resolution taken…",
+        }),
     )

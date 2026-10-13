@@ -12,24 +12,24 @@ from django.db import models
 class User(AbstractUser):
     class Shift(models.TextChoices):
         NON_SHIFT = "non_shift", "Non-Shift"
-        PAGI = "pagi", "Pagi"
-        SIANG = "siang", "Siang"
-        MALAM = "malam", "Malam"
+        PAGI = "pagi", "Morning"
+        SIANG = "siang", "Afternoon"
+        MALAM = "malam", "Night"
 
     nik = models.CharField(
-        "NIK / NIP", max_length=32, blank=True,
-        help_text="Nomor induk karyawan. Boleh dikosongkan.",
+        "Employee ID / NIK", max_length=32, blank=True,
+        help_text="Employee identification number. Optional.",
     )
-    phone = models.CharField("no. telepon", max_length=32, blank=True)
-    department = models.CharField("departemen", max_length=64, blank=True)
-    position = models.CharField("jabatan", max_length=64, blank=True)
+    phone = models.CharField("phone number", max_length=32, blank=True)
+    department = models.CharField("department", max_length=64, blank=True)
+    position = models.CharField("position", max_length=64, blank=True)
     shift = models.CharField(
         "shift", max_length=16, choices=Shift.choices, default=Shift.NON_SHIFT,
     )
 
     class Meta:
-        verbose_name = "pengguna"
-        verbose_name_plural = "pengguna"
+        verbose_name = "user"
+        verbose_name_plural = "users"
         ordering = ["first_name", "last_name", "username"]
 
     def __str__(self):

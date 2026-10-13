@@ -18,6 +18,9 @@ STATUS_COLORS = {
     "open": "#175CD3",
     "outstanding": "#DC6803",
     "closed": "#067647",
+    "power": "#F04438",  # Danger/Red
+    "los": "#F79009",    # Warning/Orange
+    "other": "#667085",  # Neutral/Grey
 }
 
 

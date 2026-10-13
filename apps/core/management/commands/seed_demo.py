@@ -14,7 +14,7 @@ from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.core.models import ActivityLog, Notification
-from apps.solutions.models import Article, Category, Folder
+from apps.solutions.models import Article, Category
 from apps.tickets.models import Ticket, TicketReply
 
 SEED = 20260912
@@ -317,14 +317,14 @@ class Command(BaseCommand):
             TicketReply.objects.all().delete()
             Ticket.objects.all().delete()
             Article.objects.all().delete()
-            Folder.objects.all().delete()
+            
             ActivityLog.objects.all().delete()
             Notification.objects.all().delete()
             self.stdout.write(self.style.WARNING("Data lama dihapus."))
 
         users = self._seed_users()
-        folders = self._seed_folders()
-        self._seed_articles(folders, users)
+        
+        self._seed_articles(users)
         tickets = self._seed_tickets(users, options["tickets"])
         self._seed_notifications(tickets, users)
 
@@ -361,7 +361,7 @@ class Command(BaseCommand):
             users.append(user)
         return users
 
-    def _seed_folders(self):
+    def _seed_folders(self): return {}
         folders = {}
         for category, name, description, order in FOLDERS:
             folder, _ = Folder.objects.get_or_create(
@@ -372,13 +372,13 @@ class Command(BaseCommand):
             folders[name] = folder
         return folders
 
-    def _seed_articles(self, folders, users):
+    def _seed_articles(self, users):
         now = timezone.now()
         for i, (folder_name, title, summary, body, tags, views, helpful, bad) in enumerate(ARTICLES):
             article, created = Article.objects.get_or_create(
                 title=title,
                 defaults={
-                    "folder": folders[folder_name],
+                    "category": Category.PROBLEM,
                     "summary": summary,
                     "body": body,
                     "tags": tags,
@@ -462,9 +462,8 @@ class Command(BaseCommand):
                 priority=priority if is_problem else random.choice(
                     [Ticket.Priority.LOW, Ticket.Priority.MEDIUM, Ticket.Priority.HIGH]),
                 source=random.choices(
-                    [Ticket.Source.NMS, Ticket.Source.EMAIL, Ticket.Source.PHONE,
-                     Ticket.Source.PORTAL, Ticket.Source.CHAT],
-                    weights=[40, 22, 16, 16, 6])[0],
+                    [Ticket.Source.NMS, Ticket.Source.EMAIL, Ticket.Source.CHAT],
+                    weights=[60, 30, 10])[0],
                 requester_name=random.choice(REQUESTERS),
                 requester_email=f"{random.choice(REQUESTERS).split()[0].lower()}@initech.co.id",
                 company=random.choice(COMPANIES),

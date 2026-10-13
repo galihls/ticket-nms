@@ -1,5 +1,7 @@
 """Model tiket gangguan & permintaan fitur."""
 
+from datetime import timedelta
+
 from django.conf import settings
 from django.db import models, transaction
 from django.urls import reverse
@@ -10,8 +12,11 @@ from apps.core.models import TimeStampedModel
 
 class TicketQuerySet(models.QuerySet):
     def in_range(self, start, end):
-        """Tiket yang dibuat pada rentang tanggal dashboard (inklusif)."""
-        return self.filter(opened_at__gte=start, opened_at__lte=end)
+        """Tiket yang dibuat atau ditutup pada rentang tanggal (inklusif)."""
+        return self.filter(
+            models.Q(opened_at__gte=start, opened_at__lte=end) |
+            models.Q(closed_at__gte=start, closed_at__lte=end)
+        ).distinct()
 
     def open(self):
         return self.filter(status=Ticket.Status.OPEN)
@@ -22,50 +27,130 @@ class TicketQuerySet(models.QuerySet):
     def closed(self):
         return self.filter(status=Ticket.Status.CLOSED)
 
+    def stale_open(self, now=None):
+        """Tiket Open yang sudah melewati batas waktu dan harus jadi Outstanding."""
+        now = now or timezone.now()
+        return self.filter(status=Ticket.Status.OPEN,
+                           opened_at__lte=now - Ticket.AUTO_OUTSTANDING_AFTER)
+
+    def high_priority(self, now=None):
+        """Tiket yang masuk High Priority: belum ditutup, PR/FR > 5 hari, RC > 2 bulan (60 hari)."""
+        now = now or timezone.now()
+        five_days_ago = now - timedelta(days=5)
+        two_months_ago = now - timedelta(days=60)
+
+        pr_fr_stale = models.Q(
+            ticket_type__in=[Ticket.Type.PROBLEM, Ticket.Type.FEATURE],
+            opened_at__lte=five_days_ago,
+        )
+        rc_stale = models.Q(
+            ticket_type=Ticket.Type.RELOCATION,
+            opened_at__lte=two_months_ago,
+        )
+        return self.exclude(status=Ticket.Status.CLOSED).filter(pr_fr_stale | rc_stale)
+
+    def auto_escalate(self):
+        """Pindahkan tiket Open ke Outstanding jika sudah melewati batas waktu."""
+        from apps.core.models import ActivityLog
+
+        moved = 0
+        now = timezone.now()
+
+        # Open -> Outstanding (60 menit)
+        tickets = list(self.stale_open(now))
+        for ticket in tickets:
+            ticket.status = Ticket.Status.OUTSTANDING
+            ticket.save(update_fields=["status", "updated_at"])
+            ActivityLog.record(
+                None, ActivityLog.Verb.TICKET_UPDATE,
+                target_label=ticket.number, subject=ticket.subject,
+                status=ticket.get_status_display(),
+                pic=ticket.requester_phone if ticket.requester_phone else "No PIC number",
+                reason="Automatic: Open → Outstanding (timeout reached)",
+                url=ticket.get_absolute_url(),
+            )
+            moved += 1
+
+        return moved
+
 
 class Ticket(TimeStampedModel):
     """Satu tiket gangguan (Problem) atau permintaan fitur (Feature Request)."""
 
+    # Aturan waktu (bisa ditimpa lewat settings TICKET_AUTO_OUTSTANDING_MINUTES /
+    # TICKET_CLOSED_EDIT_MINUTES)
+    AUTO_OUTSTANDING_AFTER = timedelta(
+        minutes=getattr(settings, "TICKET_AUTO_OUTSTANDING_MINUTES", 60))
+    CLOSED_EDIT_WINDOW = timedelta(
+        minutes=getattr(settings, "TICKET_CLOSED_EDIT_MINUTES", 10))
+
     class Type(models.TextChoices):
         PROBLEM = "PR", "Problem"
         FEATURE = "FR", "Feature Request"
+        RELOCATION = "RC", "Relocation"
 
     class Status(models.TextChoices):
         OPEN = "open", "Open"
         OUTSTANDING = "outstanding", "Outstanding"
-        CLOSED = "closed", "Close"
+        CLOSED = "closed", "Closed"
 
     class Priority(models.TextChoices):
         LOW = "low", "Low"
         MEDIUM = "medium", "Medium"
         HIGH = "high", "High"
-        URGENT = "urgent", "Urgent"
 
     class Source(models.TextChoices):
-        PORTAL = "portal", "Portal"
         EMAIL = "email", "Email"
-        PHONE = "phone", "Telepon"
         CHAT = "chat", "Chat"
-        NMS = "nms", "Alert NMS"
+        NMS = "nms", "Alert Zabbix"
+
+    class ProblemCategory(models.TextChoices):
+        """Kategori gangguan — hanya untuk tiket Problem, jadi dasar donat
+        Problem di dashboard dan rekap per site di laporan bulanan."""
+        POWER = "power", "Power Outage"
+        LOS = "los", "Internet LOS"
+        OTHER = "other", "Other"
+
+    class CompanyChoices(models.TextChoices):
+        ITID = "ITID", "ITID"
+        MITSERI = "Mitseri", "Mitseri"
+        LION_EXPRESS = "PT.LION EXPRESS", "PT.LION EXPRESS"
+        CHINA_CONSTRUCTION = "CHINA CONSTRUCTION INDUSTRIAL & ENGINEERING", "CHINA CONSTRUCTION INDUSTRIAL & ENGINEERING"
+        SURYA_FAJAR = "PT SURYA FAJAR INDONESIA", "PT SURYA FAJAR INDONESIA"
+        ANUGERAH_PANCA = "PT ANUGERAH PANCA LAKSANA", "PT ANUGERAH PANCA LAKSANA"
+        TS_TECH = "TS Tech", "TS Tech"
+        VIRTUS = "PT VIRTUS FACILITY SERVICE", "PT VIRTUS FACILITY SERVICE"
+        INITECH = "INITECH", "INITECH"
+        BPS = "BADAN PUSAT STATISTIK", "BADAN PUSAT STATISTIK"
+        ANTER_AJA = "Anter Aja", "Anter Aja"
 
     number = models.CharField("nomor tiket", max_length=24, unique=True, editable=False)
     ticket_type = models.CharField("tipe", max_length=2, choices=Type.choices,
                                    default=Type.PROBLEM, db_index=True)
 
     subject = models.CharField("subjek", max_length=255)
-    description = models.TextField("deskripsi", blank=True)
+    description = models.TextField("deskripsi")
+    problem_category = models.CharField("kategori problem", max_length=16, choices=ProblemCategory.choices, blank=True)
+    problem_detail = models.CharField("detail kategori", max_length=120, blank=True)
 
     status = models.CharField("status", max_length=16, choices=Status.choices,
                               default=Status.OPEN, db_index=True)
-    priority = models.CharField("prioritas", max_length=16, choices=Priority.choices,
+    priority = models.CharField("level", max_length=16, choices=Priority.choices,
                                 default=Priority.MEDIUM, db_index=True)
     source = models.CharField("sumber", max_length=16, choices=Source.choices,
-                              default=Source.PORTAL)
+                              default=Source.NMS)
 
     requester_name = models.CharField("pelapor", max_length=120)
     requester_email = models.EmailField("email pelapor", blank=True)
-    company = models.CharField("perusahaan / unit", max_length=120, blank=True)
+    requester_phone = models.CharField("nomor telepon", max_length=20)
+    company = models.CharField("perusahaan / unit", max_length=120, choices=CompanyChoices.choices)
+    address = models.TextField("alamat", blank=True, help_text="Alamat saat pembuatan tiket relokasi.")
     site_code = models.CharField("kode site", max_length=32, blank=True, db_index=True)
+
+    relocation_action = models.CharField("tindakan relokasi", max_length=32, blank=True,
+                                         choices=[("Relokasi", "Relocation"), ("Dismantle", "Dismantle")])
+    new_site = models.CharField("site baru", max_length=64, blank=True)
+    new_address = models.TextField("alamat baru", blank=True)
 
     assignee = models.ForeignKey(
         settings.AUTH_USER_MODEL, verbose_name="person in charge",
@@ -140,17 +225,57 @@ class Ticket(TimeStampedModel):
         return {
             self.Priority.LOW: "badge--neutral",
             self.Priority.MEDIUM: "badge--info",
-            self.Priority.HIGH: "badge--high",
-            self.Priority.URGENT: "badge--danger",
-        }[self.priority]
+            self.Priority.HIGH: "badge--danger",
+        }.get(self.priority, "badge--neutral")
 
     @property
     def type_badge(self):
-        return "badge--danger" if self.ticket_type == self.Type.PROBLEM else "badge--teal"
+        if self.ticket_type == self.Type.PROBLEM:
+            return "badge--danger"
+        elif self.ticket_type == self.Type.RELOCATION:
+            return "badge--warn"
+        return "badge--teal"
 
     @property
     def is_closed(self):
         return self.status == self.Status.CLOSED
+
+    @property
+    def is_high_priority(self):
+        """True jika tiket belum closed dan masuk kriteria High Priority (PR/FR > 5 hari, RC > 2 bulan)."""
+        if self.is_closed:
+            return False
+        now = timezone.now()
+        if self.ticket_type in (self.Type.PROBLEM, self.Type.FEATURE):
+            return self.opened_at <= now - timedelta(days=5)
+        elif self.ticket_type == self.Type.RELOCATION:
+            return self.opened_at <= now - timedelta(days=60)
+        return False
+
+    # ── Kunci tiket closed ──────────────────────────────────────────────────
+    # Admin selalu boleh mengubah. Agent hanya boleh mengubah tiket closed
+    # selama CLOSED_EDIT_WINDOW sejak ditutup (untuk koreksi salah klik).
+
+    @property
+    def edit_deadline(self):
+        if not self.is_closed or not self.closed_at:
+            return None
+        return self.closed_at + self.CLOSED_EDIT_WINDOW
+
+    @property
+    def edit_minutes_left(self):
+        deadline = self.edit_deadline
+        if not deadline:
+            return None
+        return max(0, int((deadline - timezone.now()).total_seconds() // 60) + 1)
+
+    def can_edit(self, user):
+        if not self.is_closed:
+            return True
+        if user.is_superuser:
+            return True
+        deadline = self.edit_deadline
+        return bool(deadline and timezone.now() <= deadline)
 
     @property
     def is_overdue(self):
@@ -165,12 +290,12 @@ class Ticket(TimeStampedModel):
     def duration_display(self):
         total = self.duration_minutes
         if total < 60:
-            return f"{total} mnt"
+            return f"{total}m"
         hours, minutes = divmod(total, 60)
         if hours < 24:
-            return f"{hours}j {minutes}m"
+            return f"{hours}h {minutes}m"
         days, hours = divmod(hours, 24)
-        return f"{days}h {hours}j"
+        return f"{days}d {hours}h"
 
     @property
     def tag_list(self):

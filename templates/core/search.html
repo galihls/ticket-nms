@@ -4,7 +4,7 @@
 {% block page_desc %}
   {% if q %}
     <p class="page-header__desc">
-      {{ result_count }} hasil untuk "<span class="strong">{{ q }}</span>".
+      {{ result_count }} results for "<span class="strong">{{ q }}</span>".
     </p>
   {% endif %}
 {% endblock %}
@@ -14,10 +14,10 @@
 <div class="card mb-3">
   <div class="card__body">
     <form method="get" class="row" style="gap:8px">
-      <label for="search-input" class="sr-only">Cari</label>
+      <label for="search-input" class="sr-only">Search</label>
       <input type="search" name="q" id="search-input" value="{{ q }}" class="form-input"
-             placeholder="Nomor tiket, subjek, kode site, atau judul solusi…" autofocus>
-      <button type="submit" class="btn btn--primary">Cari</button>
+             placeholder="Ticket number, subject, site code, or solution title…" autofocus>
+      <button type="submit" class="btn btn--primary">Search</button>
     </form>
   </div>
 </div>
@@ -29,9 +29,9 @@
            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/>
       </svg>
-      <div class="empty__title">Mulai mengetik untuk mencari</div>
+      <div class="empty__title">Start typing to search</div>
       <div class="empty__desc">
-        Pencarian mencakup nomor tiket, subjek, deskripsi, kode site, dan artikel solusi.
+        Search covers ticket number, subject, description, site code, and solution articles.
       </div>
     </div>
   </div>
@@ -39,13 +39,13 @@
 {% elif not result_count %}
   <div class="card">
     <div class="empty">
-      <div class="empty__title">Tidak ada hasil untuk "{{ q }}"</div>
+      <div class="empty__title">No results found for "{{ q }}"</div>
       <div class="empty__desc">
-        Coba kata kunci yang lebih singkat, atau periksa ejaan nomor tiket.
+        Try shorter keywords, or check the ticket number.
       </div>
       <div class="row" style="justify-content:center">
-        <a href="{% url 'tickets:list' %}" class="btn btn--secondary">Lihat semua tiket</a>
-        <a href="{% url 'tickets:create' %}" class="btn btn--primary">Buat tiket baru</a>
+        <a href="{% url 'tickets:list' %}" class="btn btn--secondary">View all tickets</a>
+        <a href="{% url 'tickets:create' %}" class="btn btn--primary">Create new ticket</a>
       </div>
     </div>
   </div>
@@ -54,8 +54,8 @@
   {% if tickets %}
     <div class="card mb-3">
       <div class="card__header">
-        <div class="card__title">Tiket</div>
-        <div class="card__subtitle">{{ tickets|length }} hasil</div>
+        <div class="card__title">Tickets</div>
+        <div class="card__subtitle">{{ tickets|length }} results</div>
       </div>
       <div class="card__body card__body--flush">
         <ul class="tlist">
@@ -91,7 +91,7 @@
       </div>
       <div class="card__footer">
         <a href="{% url 'tickets:list' %}?q={{ q|urlencode }}" class="btn btn--ghost btn--sm">
-          Buka di daftar tiket dengan filter lengkap
+          Open in ticket list with full filters
         </a>
       </div>
     </div>
@@ -100,8 +100,8 @@
   {% if articles %}
     <div class="card">
       <div class="card__header">
-        <div class="card__title">Artikel Solusi</div>
-        <div class="card__subtitle">{{ articles|length }} hasil</div>
+        <div class="card__title">Solution Articles</div>
+        <div class="card__subtitle">{{ articles|length }} results</div>
       </div>
       <div class="card__body card__body--flush">
         {% for article in articles %}
@@ -110,16 +110,15 @@
             <div class="kb-article__sum">{{ article.summary|default:article.body|truncatechars:150 }}</div>
             <div class="kb-article__meta">
               <span class="badge {{ article.category_badge }}">{{ article.category_label }}</span>
-              <span>{{ article.folder.name }}</span>
               <span class="dot">·</span>
-              <span>{{ article.views }} kali dilihat</span>
+              <span>{{ article.views }} views</span>
             </div>
           </a>
         {% endfor %}
       </div>
       <div class="card__footer">
         <a href="{% url 'solutions:browse' %}?q={{ q|urlencode }}" class="btn btn--ghost btn--sm">
-          Buka di Solutions
+          Open in Solutions
         </a>
       </div>
     </div>

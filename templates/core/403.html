@@ -10,14 +10,14 @@
       <rect x="5" y="10.5" width="14" height="9.5" rx="2"/>
       <path d="M8.5 10.5V7.8a3.5 3.5 0 0 1 7 0v2.7"/>
     </svg>
-    <div class="empty__title">Menu ini khusus administrator</div>
+    <div class="empty__title">This page is restricted to administrators</div>
     <div class="empty__desc">
-      Analytics &amp; Export dan Log Aktivitas hanya dapat diakses akun dengan
-      peran administrator. Hubungi administrator sistem bila Anda memerlukan akses.
+      Analytics &amp; Export and Activity Log can only be accessed by administrator accounts.
+      Contact your system administrator if you require access.
     </div>
     <div class="row" style="justify-content:center">
-      <a href="{{ back_url }}" class="btn btn--primary">Kembali ke Dashboard</a>
-      <a href="{% url 'tickets:list' %}" class="btn btn--secondary">Daftar Tiket</a>
+      <a href="{{ back_url }}" class="btn btn--primary">Back to Dashboard</a>
+      <a href="{% url 'tickets:list' %}" class="btn btn--secondary">Ticket List</a>
     </div>
   </div>
 </div>

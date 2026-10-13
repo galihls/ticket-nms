@@ -8,6 +8,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 
 from apps.core.models import ActivityLog
+from apps.core.views import admin_required
 from apps.tickets.models import Ticket
 
 from .forms import LoginForm, ProfileForm
@@ -26,7 +27,7 @@ class LoginView(auth_views.LoginView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        _record_login(self.request, method="Akun lokal")
+        _record_login(self.request, method="Local account")
         return response
 
 
@@ -35,20 +36,14 @@ class LogoutView(auth_views.LogoutView):
 
 
 def sso_login(request):
-    """Masuk lewat Office 365.
-
-    Integrasi SAML 2.0 / OIDC sungguhan menunggu app registration dari tim IT
-    INITECH. Selama `SSO.DEMO_MODE` aktif, endpoint ini memetakan langsung ke
-    satu akun agent supaya alur login dapat diperagakan utuh; begitu tenant
-    siap, hanya fungsi ini yang diganti — tampilan dan sisa aplikasi tetap.
-    """
+    """Masuk lewat Office 365."""
     if request.user.is_authenticated:
         return redirect("core:dashboard")
 
     if not settings.SSO["DEMO_MODE"]:
         messages.warning(
             request,
-            "SSO Office 365 belum dikonfigurasi. Hubungi administrator sistem.",
+            "Office 365 SSO is not configured yet. Please contact the system administrator.",
         )
         return redirect("accounts:login")
 
@@ -57,7 +52,7 @@ def sso_login(request):
             or User.objects.filter(is_active=True).first())
 
     if user is None:
-        messages.error(request, "Belum ada akun pengguna. Jalankan seed data demo.")
+        messages.error(request, "No user accounts found. Run demo seed data.")
         return redirect("accounts:login")
 
     auth_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
@@ -67,12 +62,12 @@ def sso_login(request):
 
 def _record_login(request, method):
     user = request.user
-    messages.success(request, f"Selamat datang, {user.display_name}.")
+    messages.success(request, f"Welcome back, {user.display_name}.")
     ActivityLog.record(
         user, ActivityLog.Verb.LOGIN,
         target_label=user.username,
-        subject=f"Masuk via {method}",
-        status="Aktif", pic=user.display_name,
+        subject=f"Signed in via {method}",
+        status="Active", pic=user.display_name,
     )
 
 
@@ -83,7 +78,7 @@ def profile(request):
 
     if request.method == "POST" and form.is_valid():
         form.save()
-        messages.success(request, "Profil diperbarui.")
+        messages.success(request, "Profile updated.")
         return redirect("accounts:profile")
 
     stats = Ticket.objects.filter(assignee=request.user).aggregate(
@@ -94,8 +89,8 @@ def profile(request):
     )
 
     return render(request, "accounts/profile.html", {
-        "page_title": "Profil Saya",
-        "breadcrumb": [("Profil Saya", None)],
+        "page_title": "My Profile",
+        "breadcrumb": [("My Profile", None)],
         "form": form,
         "stats": stats,
         "sso": settings.SSO,
@@ -104,7 +99,7 @@ def profile(request):
     })
 
 
-@login_required
+@admin_required
 def agent_list(request):
     """Daftar agent + beban kerjanya — dipakai supervisor saat membagi tiket."""
     agents = (User.objects.filter(is_active=True)
@@ -118,7 +113,7 @@ def agent_list(request):
                                filter=Q(tickets_assigned__status=Ticket.Status.CLOSED)),
               ))
     return render(request, "accounts/agents.html", {
-        "page_title": "Agent",
-        "breadcrumb": [("Agent", None)],
+        "page_title": "Agents",
+        "breadcrumb": [("Agents", None)],
         "agents": agents,
     })

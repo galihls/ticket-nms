@@ -12,7 +12,7 @@
           <span class="avatar avatar--xl {{ user.display_name|avatar_color }}">{{ user.initials }}</span>
           <div style="flex:1 1 240px;min-width:0">
             <h2>{{ user.display_name }}</h2>
-            <div class="text-sm muted mt-1">{{ user.email|default:"Email belum diisi" }}</div>
+            <div class="text-sm muted mt-1">{{ user.email|default:"Email not set" }}</div>
             <div class="row row--wrap mt-2" style="gap:6px">
               {% if user.is_superuser %}
                 <span class="badge badge--info">Administrator</span>
@@ -20,7 +20,6 @@
                 <span class="badge badge--neutral">Agent</span>
               {% endif %}
               {% if user.position %}<span class="badge badge--neutral">{{ user.position }}</span>{% endif %}
-              <span class="badge badge--teal">Shift {{ user.get_shift_display }}</span>
             </div>
           </div>
 
@@ -32,7 +31,7 @@
                 <path d="M8 17H4.5a1 1 0 0 1-1-1v-12a1 1 0 0 1 1-1H8"/>
                 <path d="M13 13.5 16.5 10 13 6.5"/><path d="M16.5 10H8"/>
               </svg>
-              Keluar dari sesi
+              Sign out
             </button>
           </form>
         </div>
@@ -44,26 +43,26 @@
           <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
           <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
         </svg>
-        Sesi {{ sso.PROVIDER }} · {{ sso.PROTOCOL }} · tenant
+        Session {{ sso.PROVIDER }} · {{ sso.PROTOCOL }} · tenant
         <span class="mono">{{ sso.TENANT_DOMAIN }}</span>
       </div>
     </div>
 
     <div class="card">
       <div class="card__header">
-        <div class="card__title">Data Diri</div>
-        <div class="card__subtitle">Dipakai pada tiket dan laporan</div>
+        <div class="card__title">Personal Information</div>
+        <div class="card__subtitle">Used across tickets and reports</div>
       </div>
       <form method="post" data-guard>
         {% csrf_token %}
         <div class="card__body">
           <div class="form-grid">
             <div class="form-row">
-              <label class="form-label" for="{{ form.first_name.id_for_label }}">Nama depan</label>
+              <label class="form-label" for="{{ form.first_name.id_for_label }}">First name</label>
               {{ form.first_name }}
             </div>
             <div class="form-row">
-              <label class="form-label" for="{{ form.last_name.id_for_label }}">Nama belakang</label>
+              <label class="form-label" for="{{ form.last_name.id_for_label }}">Last name</label>
               {{ form.last_name }}
             </div>
             <div class="form-row {% if form.email.errors %}has-error{% endif %}">
@@ -72,31 +71,19 @@
               {% for error in form.email.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
             </div>
             <div class="form-row">
-              <label class="form-label" for="{{ form.phone.id_for_label }}">No. telepon</label>
-              {{ form.phone }}
-            </div>
-            <div class="form-row">
-              <label class="form-label" for="{{ form.nik.id_for_label }}">NIK / NIP</label>
+              <label class="form-label" for="{{ form.nik.id_for_label }}">Employee ID / NIK</label>
               {{ form.nik }}
             </div>
             <div class="form-row">
-              <label class="form-label" for="{{ form.department.id_for_label }}">Departemen</label>
-              {{ form.department }}
-            </div>
-            <div class="form-row">
-              <label class="form-label" for="{{ form.position.id_for_label }}">Jabatan</label>
+              <label class="form-label" for="{{ form.position.id_for_label }}">Position</label>
               {{ form.position }}
-            </div>
-            <div class="form-row">
-              <label class="form-label" for="{{ form.shift.id_for_label }}">Shift</label>
-              {{ form.shift }}
             </div>
           </div>
         </div>
         <div class="card__footer">
-          <button type="submit" class="btn btn--primary btn--sm">Simpan Perubahan</button>
+          <button type="submit" class="btn btn--primary btn--sm">Save Changes</button>
           <span class="spacer"></span>
-          <span>Username <span class="mono">{{ user.username }}</span> tidak dapat diubah sendiri.</span>
+          <span>Username <span class="mono">{{ user.username }}</span> cannot be changed.</span>
         </div>
       </form>
     </div>
@@ -105,7 +92,7 @@
   <aside class="stack">
     <div class="card">
       <div class="card__header">
-        <div class="card__title">Tiket Saya</div>
+        <div class="card__title">My Tickets</div>
       </div>
       <div class="card__body">
         <div class="meta-list">
@@ -127,14 +114,14 @@
           </div>
         </div>
         <a href="{% url 'tickets:list' %}?assignee=me" class="btn btn--secondary btn--block mt-2">
-          Lihat semua tiket saya
+          View all my tickets
         </a>
       </div>
     </div>
 
     <div class="card">
       <div class="card__header">
-        <div class="card__title">Aktivitas Terakhir</div>
+        <div class="card__title">Recent Activity</div>
       </div>
       <div class="card__body">
         <ul class="timeline">
@@ -147,7 +134,7 @@
           {% empty %}
             <li>
               <span class="timeline__dot"></span>
-              <div class="timeline__title muted">Belum ada aktivitas.</div>
+              <div class="timeline__title muted">No activity recorded yet.</div>
             </li>
           {% endfor %}
         </ul>

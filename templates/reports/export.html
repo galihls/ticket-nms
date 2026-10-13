@@ -3,26 +3,43 @@
 
 {% block page_desc %}
   <p class="page-header__desc">
-    Tarik laporan harian dan bulanan ke format <span class="mono">.xlsx</span>.
-    Akses terbatas untuk administrator.
+    Export daily, shift-based, and monthly ticket reports to <span class="mono">.xlsx</span> format.
   </p>
 {% endblock %}
 
 {% block page_actions %}
-  <a href="{% url 'reports:download' %}?{% qs %}" class="btn btn--primary">
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
-         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M10 3v9M6.5 8.8 10 12.3l3.5-3.5"/><path d="M3.5 13.5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2"/>
-    </svg>
-    Download .xlsx
-  </a>
+  <div style="display: flex; gap: 8px;">
+    <a href="{% url 'reports:download' %}?{% qs %}&type=detail" class="btn btn--primary" title="Detailed table of all tickets">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M10 3v9M6.5 8.8 10 12.3l3.5-3.5"/><path d="M3.5 13.5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2"/>
+      </svg>
+      Ticket Details
+    </a>
+    <a href="{% url 'reports:download' %}?{% qs %}&type=rekap" class="btn btn--secondary" title="Summary of counts and percentages">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M10 3v9M6.5 8.8 10 12.3l3.5-3.5"/><path d="M3.5 13.5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2"/>
+      </svg>
+      Summary
+    </a>
+    {% if is_admin %}
+      <a href="{% url 'reports:download' %}?{% qs %}&type=agent" class="btn btn--secondary" title="Agent performance statistics">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10 3v9M6.5 8.8 10 12.3l3.5-3.5"/><path d="M3.5 13.5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2"/>
+        </svg>
+        Agent Performance
+      </a>
+    {% endif %}
+  </div>
 {% endblock %}
 
 {% block content %}
 
 {# ── Pemilih periode ──────────────────────────────────────────────────── #}
 <div class="filterbar">
-  <span class="filterbar__label">Jenis laporan</span>
+  <span class="filterbar__label">Report type</span>
   <div class="chips">
     {% for value, label in period_choices %}
       <a href="?{% qs period=value preset=None from=None to=None %}"
@@ -34,10 +51,13 @@
 
   <form method="get" class="row" style="gap:6px">
     <input type="hidden" name="period" value="{{ period }}">
-    <label for="site-filter" class="sr-only">Filter kode site</label>
-    <input type="search" name="site" id="site-filter" value="{{ site }}" class="form-input"
-           placeholder="Filter kode site…" style="height:28px;width:180px;font-size:12.5px">
-    <button type="submit" class="btn btn--secondary btn--sm">Terapkan</button>
+    <label for="company-filter" class="sr-only">Company Filter</label>
+    <select name="company" id="company-filter" class="form-select" style="height:28px;font-size:12.5px" onchange="this.form.submit()">
+      <option value="">All Companies</option>
+      {% for value, label in companies %}
+        <option value="{{ value }}" {% if request.GET.company == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
   </form>
 </div>
 
@@ -46,9 +66,9 @@
 {# ── Ringkasan yang akan diekspor ─────────────────────────────────────── #}
 <div class="grid grid--4 mb-3">
   <div class="stat">
-    <div class="stat__label">Total Tiket</div>
+    <div class="stat__label">Total Tickets</div>
     <div class="stat__value">{{ counts.total|intcomma }}</div>
-    <div class="stat__meta">{{ range.days }} hari · {{ period_label }}</div>
+    <div class="stat__meta">{{ range.days }} days · {{ period_label }}</div>
   </div>
   <div class="stat stat--open">
     <div class="stat__label">Open</div>
@@ -68,8 +88,8 @@
   <div class="card">
     <div class="card__header">
       <div>
-        <div class="card__title">Sebaran Status</div>
-        <div class="card__subtitle">Sheet "Rekap" pada berkas Excel</div>
+        <div class="card__title">Status Distribution</div>
+        <div class="card__subtitle">Summary sheet in Excel file</div>
       </div>
     </div>
     <div class="card__body">
@@ -85,8 +105,8 @@
   <div class="card">
     <div class="card__header">
       <div>
-        <div class="card__title">Isi Berkas Excel</div>
-        <div class="card__subtitle">Mengacu pada Report Monitoring INITECH 2026</div>
+        <div class="card__title">Excel File Contents</div>
+        <div class="card__subtitle">Based on Report Monitoring INITECH 2026</div>
       </div>
     </div>
     <div class="card__body card__body--flush">
@@ -111,11 +131,11 @@
       </ul>
     </div>
     <div class="card__footer">
-      <a href="{% url 'reports:download' %}?{% qs %}" class="btn btn--primary btn--sm">
-        Unduh sekarang
+      <a href="{% url 'reports:download' %}?{% qs %}&type=detail" class="btn btn--primary btn--sm">
+        Download Ticket Details
       </a>
       <span class="spacer"></span>
-      <span>{{ counts.total }} baris data akan ikut terekspor</span>
+      <span>{{ counts.total }} data rows will be exported</span>
     </div>
   </div>
 </div>
@@ -124,13 +144,13 @@
 <div class="card mb-3">
   <div class="card__header">
     <div>
-      <div class="card__title">Pratinjau Detail Tiket</div>
+      <div class="card__title">Ticket Details Preview</div>
       <div class="card__subtitle">
-        12 baris pertama dari {{ counts.total }} — berkas berisi seluruhnya
+        First 12 rows of {{ counts.total }} — file contains all records
       </div>
     </div>
     <div class="card__actions">
-      <a href="{% url 'tickets:list' %}?{% qs %}" class="btn btn--ghost btn--sm">Buka di daftar tiket</a>
+      <a href="{% url 'tickets:list' %}?{% qs %}" class="btn btn--ghost btn--sm">Open in ticket list</a>
     </div>
   </div>
   <div class="card__body card__body--flush">
@@ -138,38 +158,42 @@
       <table class="table table--compact table--striped">
         <thead>
           <tr>
-            <th>No. Tiket</th>
-            <th>Tipe</th>
-            <th>Subjek</th>
-            <th>Site</th>
-            <th>PIC</th>
+            <th>Ticket ID</th>
+            <th>Subject</th>
             <th>Status</th>
-            <th>Open</th>
-            <th>Close</th>
-            <th class="num">Durasi</th>
+            <th>Level</th>
+            <th>Type</th>
+            {% if has_rc %}
+              <th>Origin Address</th>
+              <th>New Site</th>
+              <th>New Address</th>
+            {% endif %}
+            <th>Company</th>
+            <th>Created time</th>
           </tr>
         </thead>
         <tbody>
           {% for ticket in preview %}
             <tr>
               <td><a href="{{ ticket.get_absolute_url }}" class="ticket-no">{{ ticket.number }}</a></td>
-              <td><span class="badge {{ ticket.type_badge }}">{{ ticket.get_ticket_type_display }}</span></td>
               <td class="truncate" style="max-width:280px">{{ ticket.subject }}</td>
-              <td>{% if ticket.site_code %}<span class="site-code">{{ ticket.site_code }}</span>{% else %}—{% endif %}</td>
-              <td class="nowrap">{% if ticket.assignee %}{{ ticket.assignee.display_name }}{% else %}—{% endif %}</td>
               <td><span class="badge {{ ticket.status_badge }}">{{ ticket.get_status_display }}</span></td>
-              <td class="nowrap text-sm">{{ ticket.opened_at|date:"d/m/y H:i" }}</td>
-              <td class="nowrap text-sm">
-                {% if ticket.closed_at %}{{ ticket.closed_at|date:"d/m/y H:i" }}{% else %}—{% endif %}
-              </td>
-              <td class="num nowrap">{{ ticket.duration_display }}</td>
+              <td><span class="badge {{ ticket.priority_badge }}">{{ ticket.get_priority_display }}</span></td>
+              <td><span class="badge {{ ticket.type_badge }}">{{ ticket.get_ticket_type_display }}</span></td>
+              {% if has_rc %}
+                <td class="truncate" style="max-width:180px">{{ ticket.address|default:"—" }}</td>
+                <td>{{ ticket.new_site|default:"—" }}</td>
+                <td class="truncate" style="max-width:180px">{{ ticket.new_address|default:"—" }}</td>
+              {% endif %}
+              <td>{{ ticket.get_company_display|default:"—" }}</td>
+              <td class="nowrap text-sm">{{ ticket.opened_at|date:"d/m/Y H:i" }}</td>
             </tr>
           {% empty %}
             <tr>
-              <td colspan="9">
+              <td colspan="{% if has_rc %}10{% else %}7{% endif %}">
                 <div class="empty">
-                  <div class="empty__title">Tidak ada tiket pada periode ini</div>
-                  <div class="empty__desc">Ubah rentang tanggal atau filter kode site di atas.</div>
+                  <div class="empty__title">No tickets in this period</div>
+                  <div class="empty__desc">Change date range or Company filter above.</div>
                 </div>
               </td>
             </tr>
@@ -180,55 +204,57 @@
   </div>
 </div>
 
-<div class="grid grid--2">
-  <div class="card">
-    <div class="card__header">
-      <div class="card__title">Performa Agent</div>
-      <div class="card__subtitle">Sheet "Performa Agent"</div>
-    </div>
-    <div class="card__body card__body--flush">
-      <div class="table-wrap">
-        <table class="table table--compact">
-          <thead>
-            <tr>
-              <th>Agent</th>
-              <th class="num">Open</th>
-              <th class="num">Outstanding</th>
-              <th class="num">Close</th>
-              <th class="num">Rasio</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for agent in agents %}
+<div class="grid {% if is_admin %}grid--2{% endif %}">
+  {% if is_admin %}
+    <div class="card">
+      <div class="card__header">
+        <div class="card__title">Agent Performance</div>
+        <div class="card__subtitle">Agent Performance sheet</div>
+      </div>
+      <div class="card__body card__body--flush">
+        <div class="table-wrap">
+          <table class="table table--compact">
+            <thead>
               <tr>
-                <td>
-                  <span class="row" style="gap:8px">
-                    <span class="avatar avatar--sm {{ agent.name|avatar_color }}">{{ agent.initials }}</span>
-                    {{ agent.name }}
-                  </span>
-                </td>
-                <td class="num">{{ agent.open }}</td>
-                <td class="num">{{ agent.outstanding }}</td>
-                <td class="num">{{ agent.closed }}</td>
-                <td class="num">
-                  <span class="badge {% if agent.rate >= 80 %}badge--ok{% elif agent.rate >= 50 %}badge--warn{% else %}badge--neutral{% endif %}">
-                    {{ agent.rate }}%
-                  </span>
-                </td>
+                <th>Agent</th>
+                <th class="num">Open</th>
+                <th class="num">Outstanding</th>
+                <th class="num">Close</th>
+                <th class="num">Rate</th>
               </tr>
-            {% empty %}
-              <tr><td colspan="5"><div class="empty" style="padding:28px"><div class="empty__desc mb-0">Tidak ada data.</div></div></td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {% for agent in agents %}
+                <tr>
+                  <td>
+                    <span class="row" style="gap:8px">
+                      <span class="avatar avatar--sm {{ agent.name|avatar_color }}">{{ agent.initials }}</span>
+                      {{ agent.name }}
+                    </span>
+                  </td>
+                  <td class="num">{{ agent.open }}</td>
+                  <td class="num">{{ agent.outstanding }}</td>
+                  <td class="num">{{ agent.closed }}</td>
+                  <td class="num">
+                    <span class="badge {% if agent.rate >= 80 %}badge--ok{% elif agent.rate >= 50 %}badge--warn{% else %}badge--neutral{% endif %}">
+                      {{ agent.rate }}%
+                    </span>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="5"><div class="empty" style="padding:28px"><div class="empty__desc mb-0">No data available.</div></div></td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
-  </div>
+  {% endif %}
 
   <div class="card">
     <div class="card__header">
-      <div class="card__title">Riwayat Ekspor</div>
-      <div class="card__subtitle">Laporan yang sudah pernah ditarik</div>
+      <div class="card__title">Export History</div>
+      <div class="card__subtitle">Previously downloaded reports</div>
     </div>
     <div class="card__body card__body--flush">
       <ul class="mini-list">
@@ -240,7 +266,7 @@
                 <span class="mini-list__meta">
                   {{ item.get_period_display }} ·
                   {{ item.date_from|date:"d/m/Y" }}–{{ item.date_to|date:"d/m/Y" }} ·
-                  {{ item.row_count }} baris
+                  {{ item.row_count }} rows
                 </span>
               </span>
               <span class="text-xs muted nowrap">
@@ -253,7 +279,7 @@
           <li>
             <div class="empty" style="padding:36px 16px">
               <div class="empty__desc mb-0">
-                Belum ada laporan yang diunduh. Klik <strong>Download .xlsx</strong> di atas.
+                No reports downloaded yet. Click a download button above.
               </div>
             </div>
           </li>

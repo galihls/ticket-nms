@@ -1,9 +1,9 @@
 {% load static %}<!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Masuk · {{ APP_NAME }}</title>
+  <title>Sign In · {{ APP_NAME }}</title>
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" href="{% static 'img/logo.jpg' %}">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
@@ -11,6 +11,7 @@
 <body>
 <div class="auth">
 
+  <!-- ═══ Panel kiri: branding ═══ -->
   <section class="auth__brand">
     <div class="auth__logo-row">
       <img src="{% static 'img/logo.jpg' %}" alt="Logo {{ COMPANY_SHORT }}" class="auth__logo">
@@ -21,10 +22,9 @@
     </div>
 
     <div class="auth__pitch">
-      <h2>Pusat kendali tiket &amp; SLA jaringan.</h2>
+      <h2>Network ticketing &amp; SLA control center.</h2>
       <p>
-        Satu tempat untuk mencatat gangguan per site, menelusuri solusi yang
-        sudah pernah dipakai, dan menyusun laporan operasional.
+        A unified workspace to log site issues, look up proven solutions, and generate operational reports.
       </p>
       <ul class="auth__points">
         <li>
@@ -32,28 +32,29 @@
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="10" cy="10" r="7.5"/><path d="m6.6 10.2 2.3 2.3 4.5-4.9"/>
           </svg>
-          Tiket Problem &amp; Feature Request bernomor otomatis
+          Automatic ticket numbering for Problem &amp; Feature Request
         </li>
         <li>
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="10" cy="10" r="7.5"/><path d="m6.6 10.2 2.3 2.3 4.5-4.9"/>
           </svg>
-          Knowledge base solusi dari penanganan agent lain
+          Knowledge base solutions from peer agent resolutions
         </li>
         <li>
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="10" cy="10" r="7.5"/><path d="m6.6 10.2 2.3 2.3 4.5-4.9"/>
           </svg>
-          Laporan harian &amp; bulanan siap ekspor ke Excel
+          Daily &amp; monthly reports ready to export to Excel
         </li>
       </ul>
     </div>
 
-    <p class="auth__foot">&copy; {% now "Y" %} {{ COMPANY_NAME }}. Penggunaan internal.</p>
+    <p class="auth__foot">&copy; {% now "Y" %} {{ COMPANY_NAME }}. Internal use only.</p>
   </section>
 
+  <!-- ═══ Panel kanan: form login ═══ -->
   <section class="auth__panel">
     <div class="auth__form">
 
@@ -65,11 +66,12 @@
         </span>
       </div>
 
-      <h1>Masuk</h1>
+      <h1>Sign In</h1>
       <p class="auth__form-sub">
-        Gunakan akun {{ sso.PROVIDER }} {{ COMPANY_SHORT }} Anda.
+        Sign in to {{ APP_NAME }} to start working.
       </p>
 
+      <!-- Pesan error non-field -->
       {% if form.non_field_errors %}
         <div class="alert alert--error" role="alert">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
@@ -82,43 +84,13 @@
         </div>
       {% endif %}
 
-      <!-- Jalur utama sesuai requirement: SSO Office 365 (SAML 2.0 / OIDC) -->
-      {% if sso.ENABLED %}
-        <a href="{% url 'accounts:sso_login' %}{% if next %}?next={{ next|urlencode }}{% endif %}"
-           class="sso-btn">
-          <svg viewBox="0 0 21 21" aria-hidden="true">
-            <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
-            <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
-            <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
-            <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
-          </svg>
-          Masuk dengan {{ sso.PROVIDER }}
-        </a>
-
-        <p class="text-xs muted mt-2" style="text-align:center">
-          Protokol {{ sso.PROTOCOL }} · tenant <span class="mono">{{ sso.TENANT_DOMAIN }}</span>
-        </p>
-
-        <div class="or-sep">atau</div>
-      {% endif %}
-
-      <!-- Cadangan: akun lokal, untuk kondisi SSO tidak dapat diakses -->
-      <button type="button" class="btn btn--secondary btn--block" data-collapse-toggle="local-login">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
-             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <rect x="4" y="8.5" width="12" height="8" rx="1.5"/>
-          <path d="M7 8.5V6.2a3 3 0 0 1 6 0v2.3"/>
-        </svg>
-        Masuk dengan akun lokal
-      </button>
-
-      <form method="post" class="collapse mt-3" id="local-login" novalidate
-            {% if not form.errors %}hidden{% endif %}>
+      <!-- ── Form login lokal (langsung tampil) ── -->
+      <form method="post" class="login-form" novalidate data-guard>
         {% csrf_token %}
 
         <div class="form-row {% if form.username.errors %}has-error{% endif %}">
           <label class="form-label" for="{{ form.username.id_for_label }}">
-            {{ form.username.label }}<span class="req">*</span>
+            Username<span class="req">*</span>
           </label>
           {{ form.username }}
           {% for error in form.username.errors %}
@@ -128,9 +100,26 @@
 
         <div class="form-row {% if form.password.errors %}has-error{% endif %}">
           <label class="form-label" for="{{ form.password.id_for_label }}">
-            {{ form.password.label }}<span class="req">*</span>
+            Password<span class="req">*</span>
           </label>
-          {{ form.password }}
+          <div class="input-group">
+            {{ form.password }}
+            <button type="button" class="input-group__toggle" data-toggle-password
+                    aria-label="Toggle password visibility" tabindex="-1">
+              <svg class="eye-open" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+                   stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1.8 10s3-5.8 8.2-5.8S18.2 10 18.2 10s-3 5.8-8.2 5.8S1.8 10 1.8 10z"/>
+                <circle cx="10" cy="10" r="2.8"/>
+              </svg>
+              <svg class="eye-closed" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+                   stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" hidden>
+                <path d="M8.3 3.8C8.8 3.7 9.4 3.6 10 3.6c5.2 0 8.2 6.4 8.2 6.4s-.7 1.5-2.1 3"/>
+                <path d="M5.7 5.7C3.3 7.3 1.8 10 1.8 10s3 6.4 8.2 6.4c1.6 0 3-.5 4.3-1.3"/>
+                <path d="M7.6 12.4A3 3 0 0 1 10 7a3 3 0 0 1 2.4 4.8"/>
+                <path d="M2 2l16 16"/>
+              </svg>
+            </button>
+          </div>
           {% for error in form.password.errors %}
             <div class="form-error">{{ error }}</div>
           {% endfor %}
@@ -139,17 +128,59 @@
         {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
 
         <button type="submit" class="btn btn--primary btn--lg btn--block mt-2">
-          Masuk
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="4" y="8.5" width="12" height="8" rx="1.5"/>
+            <path d="M7 8.5V6.2a3 3 0 0 1 6 0v2.3"/>
+          </svg>
+          Sign In
         </button>
       </form>
 
+      <!-- ── SSO Office 365 (jika aktif) ── -->
+      {% if sso.ENABLED %}
+        <div class="or-sep">or</div>
+
+        <a href="{% url 'accounts:sso_login' %}{% if next %}?next={{ next|urlencode }}{% endif %}"
+           class="sso-btn">
+          <svg viewBox="0 0 21 21" aria-hidden="true">
+            <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+            <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+            <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+            <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+          </svg>
+          Sign in with {{ sso.PROVIDER }}
+        </a>
+
+        <p class="text-xs muted mt-1" style="text-align:center">
+          Protocol {{ sso.PROTOCOL }} · tenant <span class="mono">{{ sso.TENANT_DOMAIN }}</span>
+        </p>
+      {% endif %}
+
       <p class="auth__helper">
-        Kendala masuk? Hubungi administrator sistem {{ COMPANY_SHORT }}.
+        Having trouble signing in? Contact {{ COMPANY_SHORT }} system administrator.
       </p>
     </div>
   </section>
 
 </div>
+
+<script>
+  /* Toggle visibilitas password */
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("[data-toggle-password]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var input = btn.parentElement.querySelector("input");
+        if (!input) return;
+        var isPassword = input.type === "password";
+        input.type = isPassword ? "text" : "password";
+        btn.querySelector(".eye-open").hidden = isPassword;
+        btn.querySelector(".eye-closed").hidden = !isPassword;
+        input.focus();
+      });
+    });
+  });
+</script>
 <script src="{% static 'js/app.js' %}" defer></script>
 </body>
 </html>

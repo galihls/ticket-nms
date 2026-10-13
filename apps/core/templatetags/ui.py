@@ -71,13 +71,13 @@ def relative_time(value):
     if seconds < 0:
         return timezone.localtime(value).strftime("%d/%m/%Y %H:%M")
     if seconds < 60:
-        return "baru saja"
+        return "just now"
     if seconds < 3600:
-        return f"{seconds // 60} mnt lalu"
+        return f"{seconds // 60}m ago"
     if seconds < 86400:
-        return f"{seconds // 3600} jam lalu"
+        return f"{seconds // 3600}h ago"
     if seconds < 604800:
-        return f"{seconds // 86400} hari lalu"
+        return f"{seconds // 86400}d ago"
     return timezone.localtime(value).strftime("%d/%m/%Y")
 
 

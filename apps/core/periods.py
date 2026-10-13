@@ -11,12 +11,18 @@ from datetime import date, datetime, time, timedelta
 from django.utils import timezone
 
 PRESETS = [
-    ("today", "Hari ini"),
-    ("7d", "7 hari terakhir"),
-    ("30d", "30 hari terakhir"),
-    ("this_month", "Bulan ini"),
-    ("last_month", "Bulan lalu"),
-    ("custom", "Kustom"),
+    ("today", "Today"),
+    ("shift_1", "07:30 - 11:30"),
+    ("shift_2", "11:30 - 15:30"),
+    ("shift_3", "15:30 - 19:30"),
+    ("shift_4", "19:30 - 23:00"),
+    ("shift_5", "23:00 - 03:00"),
+    ("shift_6", "03:00 - 07:30"),
+    ("7d", "Last 7 days"),
+    ("30d", "Last 30 days"),
+    ("this_month", "This Month"),
+    ("last_month", "Last Month"),
+    ("custom", "Custom"),
 ]
 
 DEFAULT_PRESET = "30d"
@@ -27,20 +33,28 @@ class DateRange:
     preset: str
     start_date: date
     end_date: date
+    start_time: time = time.min
+    end_time: time = time.max
 
     @property
     def start(self):
-        """Awal hari pertama, sadar zona waktu."""
-        return timezone.make_aware(datetime.combine(self.start_date, time.min))
+        """Awal waktu, sadar zona waktu."""
+        if isinstance(self.start_date, datetime):
+            return timezone.make_aware(self.start_date) if timezone.is_naive(self.start_date) else self.start_date
+        return timezone.make_aware(datetime.combine(self.start_date, self.start_time))
 
     @property
     def end(self):
-        """Akhir hari terakhir — inklusif, supaya tiket sore hari ikut terhitung."""
-        return timezone.make_aware(datetime.combine(self.end_date, time.max))
+        """Akhir waktu - inklusif."""
+        if isinstance(self.end_date, datetime):
+            return timezone.make_aware(self.end_date) if timezone.is_naive(self.end_date) else self.end_date
+        return timezone.make_aware(datetime.combine(self.end_date, self.end_time))
 
     @property
     def days(self):
-        return (self.end_date - self.start_date).days + 1
+        d1 = self.start_date.date() if isinstance(self.start_date, datetime) else self.start_date
+        d2 = self.end_date.date() if isinstance(self.end_date, datetime) else self.end_date
+        return (d2 - d1).days + 1
 
     @property
     def label(self):
@@ -81,7 +95,20 @@ def resolve(request, default=DEFAULT_PRESET):
         preset = "custom"
 
     if preset == "today":
-        start = end = today
+        return DateRange(preset, today, today)
+    elif preset == "shift_1":
+        return DateRange(preset, today, today, time(7, 30), time(11, 30))
+    elif preset == "shift_2":
+        return DateRange(preset, today, today, time(11, 30), time(15, 30))
+    elif preset == "shift_3":
+        return DateRange(preset, today, today, time(15, 30), time(19, 30))
+    elif preset == "shift_4":
+        return DateRange(preset, today, today, time(19, 30), time(23, 0))
+    elif preset == "shift_5":
+        # 23:00 to 03:00 next day
+        return DateRange(preset, today, today + timedelta(days=1), time(23, 0), time(3, 0))
+    elif preset == "shift_6":
+        return DateRange(preset, today, today, time(3, 0), time(7, 30))
     elif preset == "7d":
         start, end = today - timedelta(days=6), today
     elif preset == "this_month":

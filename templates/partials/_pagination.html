@@ -2,12 +2,12 @@
 {% if page_obj.paginator.num_pages > 1 or page_obj.paginator.count %}
   <div class="pagination">
     <span class="pagination__info">
-      Menampilkan {{ page_obj.start_index }}–{{ page_obj.end_index }}
-      dari {{ page_obj.paginator.count }} data
+      Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}
+      of {{ page_obj.paginator.count }} entries
     </span>
 
     {% if page_obj.has_previous %}
-      <a href="?{% qs page=page_obj.previous_page_number %}" aria-label="Halaman sebelumnya">‹</a>
+      <a href="?{% qs page=page_obj.previous_page_number %}" aria-label="Previous page">‹</a>
     {% else %}
       <span class="pg is-disabled">‹</span>
     {% endif %}
@@ -25,7 +25,7 @@
     {% endfor %}
 
     {% if page_obj.has_next %}
-      <a href="?{% qs page=page_obj.next_page_number %}" aria-label="Halaman berikutnya">›</a>
+      <a href="?{% qs page=page_obj.next_page_number %}" aria-label="Next page">›</a>
     {% else %}
       <span class="pg is-disabled">›</span>
     {% endif %}

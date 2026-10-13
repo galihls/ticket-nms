@@ -41,7 +41,18 @@ def dashboard(request):
     status_rows = [
         ("open", "Open", counts["open"]),
         ("outstanding", "Outstanding", counts["outstanding"]),
-        ("closed", "Close", counts["closed"]),
+        ("closed", "Closed", counts["closed"]),
+    ]
+
+    problem_counts = scope.filter(ticket_type=Ticket.Type.PROBLEM).aggregate(
+        power=Count("id", filter=Q(problem_category=Ticket.ProblemCategory.POWER)),
+        los=Count("id", filter=Q(problem_category=Ticket.ProblemCategory.LOS)),
+        other=Count("id", filter=Q(problem_category=Ticket.ProblemCategory.OTHER)),
+    )
+    problem_rows = [
+        ("power", "Power Outage", problem_counts["power"]),
+        ("los", "Internet LOS", problem_counts["los"]),
+        ("other", "Other", problem_counts["other"]),
     ]
 
     context = {
@@ -54,78 +65,19 @@ def dashboard(request):
         "delta_percent": delta_percent,
         "prev_total": prev_total,
         "donut": charts.donut(status_rows),
+        "problem_donut": charts.donut(problem_rows),
         "type_counts": {
             "problem": scope.filter(ticket_type=Ticket.Type.PROBLEM).count(),
             "feature": scope.filter(ticket_type=Ticket.Type.FEATURE).count(),
+            "relocation": scope.filter(ticket_type=Ticket.Type.RELOCATION).count(),
         },
-        "agents": _agent_performance(scope, request.GET.get("sort", "total")),
-        "sort": request.GET.get("sort", "total"),
-        "agent_sorts": [
-            ("total", "Total tiket"),
-            ("open", "Open terbanyak"),
-            ("outstanding", "Outstanding terbanyak"),
-            ("closed", "Close terbanyak"),
-            ("rate", "Rasio penyelesaian"),
-            ("name", "Nama agent"),
-        ],
-        "recent_tickets": scope.select_related("assignee")[:8],
-        "urgent_tickets": scope.exclude(status=Ticket.Status.CLOSED)
-                               .filter(priority__in=[Ticket.Priority.URGENT,
-                                                     Ticket.Priority.HIGH])
-                               .select_related("assignee")[:5],
-        "activities": ActivityLog.objects.select_related("actor")[:8],
-        "top_articles": Article.objects.published().select_related("folder")
+        "urgent_tickets": Ticket.objects.high_priority()
+                                       .select_related("assignee")[:5],
+        "activities": ActivityLog.objects.select_related("actor")[:4],
+        "top_articles": Article.objects.published().select_related("author")
                                        .order_by("-views")[:4],
     }
     return render(request, "core/dashboard.html", context)
-
-
-def _agent_performance(scope, sort):
-    """Progres tiket per agent — dari open sampai close."""
-    rows = (
-        scope.filter(assignee__isnull=False)
-        .values("assignee__id", "assignee__first_name", "assignee__last_name",
-                "assignee__username", "assignee__position")
-        .annotate(
-            total=Count("id"),
-            open=Count("id", filter=Q(status=Ticket.Status.OPEN)),
-            outstanding=Count("id", filter=Q(status=Ticket.Status.OUTSTANDING)),
-            closed=Count("id", filter=Q(status=Ticket.Status.CLOSED)),
-        )
-    )
-
-    agents = []
-    for row in rows:
-        name = f"{row['assignee__first_name']} {row['assignee__last_name']}".strip()
-        name = name or row["assignee__username"]
-        parts = [p for p in name.split() if p]
-        agents.append({
-            "id": row["assignee__id"],
-            "name": name,
-            "initials": "".join(p[0] for p in parts[:2]).upper(),
-            "position": row["assignee__position"] or "Agent",
-            "total": row["total"],
-            "open": row["open"],
-            "outstanding": row["outstanding"],
-            "closed": row["closed"],
-            "rate": round(row["closed"] * 100 / row["total"]) if row["total"] else 0,
-            "bar": charts.stacked_bar([
-                ("open", "Open", row["open"]),
-                ("outstanding", "Outstanding", row["outstanding"]),
-                ("closed", "Close", row["closed"]),
-            ], total=row["total"]),
-        })
-
-    keys = {
-        "total": lambda a: -a["total"],
-        "open": lambda a: -a["open"],
-        "outstanding": lambda a: -a["outstanding"],
-        "closed": lambda a: -a["closed"],
-        "rate": lambda a: -a["rate"],
-        "name": lambda a: a["name"].lower(),
-    }
-    agents.sort(key=keys.get(sort, keys["total"]))
-    return agents
 
 
 @admin_required
@@ -148,8 +100,8 @@ def activity_log(request):
 
     from apps.accounts.models import User
     return render(request, "core/activity_log.html", {
-        "page_title": "Log Aktivitas",
-        "breadcrumb": [("Log Aktivitas", None)],
+        "page_title": "Activity Log",
+        "breadcrumb": [("Activity Log", None)],
         "page_obj": page,
         "verbs": ActivityLog.Verb.choices,
         "actors": User.objects.filter(is_active=True),
@@ -166,8 +118,8 @@ def notifications(request):
         notes = notes.filter(is_read=False)
     page = Paginator(notes, 20).get_page(request.GET.get("page"))
     return render(request, "core/notifications.html", {
-        "page_title": "Notifikasi",
-        "breadcrumb": [("Notifikasi", None)],
+        "page_title": "Notifications",
+        "breadcrumb": [("Notifications", None)],
         "page_obj": page,
         "filter": request.GET.get("filter", "all"),
     })
@@ -177,7 +129,7 @@ def notifications(request):
 @require_POST
 def notifications_read(request):
     count = Notification.objects.filter(is_read=False).update(is_read=True)
-    messages.success(request, f"{count} notifikasi ditandai sudah dibaca.")
+    messages.success(request, f"{count} notifications marked as read.")
     return redirect(request.POST.get("next") or "core:notifications")
 
 
@@ -194,11 +146,11 @@ def search(request):
         ).select_related("assignee")[:25])
         articles = (Article.objects.published().filter(
             Q(title__icontains=q) | Q(body__icontains=q) | Q(tags__icontains=q)
-        ).select_related("folder")[:10])
+        ).select_related("author")[:10])
 
     return render(request, "core/search.html", {
-        "page_title": "Hasil Pencarian",
-        "breadcrumb": [("Pencarian", None)],
+        "page_title": "Search Results",
+        "breadcrumb": [("Search", None)],
         "q": q,
         "tickets": tickets,
         "articles": articles,
@@ -210,8 +162,8 @@ def search(request):
 def styleguide(request):
     """Katalog komponen UI — acuan internal supaya tampilan tetap konsisten."""
     return render(request, "core/styleguide.html", {
-        "page_title": "Panduan Komponen",
-        "breadcrumb": [("Panduan Komponen", None)],
+        "page_title": "Component Styleguide",
+        "breadcrumb": [("Component Styleguide", None)],
         "donut_demo": charts.donut([
             ("open", "Open", 12), ("outstanding", "Outstanding", 7), ("closed", "Close", 31),
         ]),
@@ -221,8 +173,8 @@ def styleguide(request):
 @login_required
 def forbidden(request):
     return render(request, "core/403.html", {
-        "page_title": "Akses Ditolak",
-        "breadcrumb": [("Akses Ditolak", None)],
+        "page_title": "Access Denied",
+        "breadcrumb": [("Access Denied", None)],
         "back_url": reverse("core:dashboard"),
     }, status=403)
 

@@ -66,7 +66,12 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "apps.tickets.middleware.AutoEscalateMiddleware",
 ]
+
+# Aturan waktu tiket
+TICKET_AUTO_OUTSTANDING_MINUTES = 60  # Open → Outstanding otomatis setelah 1 jam
+TICKET_CLOSED_EDIT_MINUTES = 10       # Agent masih boleh ubah tiket closed 10 menit
 
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"

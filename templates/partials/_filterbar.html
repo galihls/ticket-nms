@@ -7,7 +7,7 @@
       <rect x="3" y="4.5" width="14" height="12.5" rx="1.5"/>
       <path d="M3 8.5h14M7 2.8v3.2M13 2.8v3.2"/>
     </svg>
-    Periode
+    Period
   </span>
 
   <div class="chips">
@@ -26,17 +26,17 @@
       {% endif %}
     {% endfor %}
     <input type="date" name="from" value="{{ range.start_date|date:'Y-m-d' }}"
-           aria-label="Dari tanggal">
+           aria-label="From Date">
     <span>–</span>
     <input type="date" name="to" value="{{ range.end_date|date:'Y-m-d' }}"
-           aria-label="Sampai tanggal">
-    <button type="submit" class="btn btn--secondary btn--sm">Terapkan</button>
+           aria-label="To Date">
+    <button type="submit" class="btn btn--secondary btn--sm">Apply</button>
   </form>
 
   <span class="filterbar__spacer"></span>
 
   <span class="filterbar__range">
-    Menampilkan <strong>{{ range.label }}</strong>
-    <span class="muted">({{ range.days }} hari)</span>
+    Showing <strong>{{ range.label }}</strong>
+    <span class="muted">({{ range.days }} days)</span>
   </span>
 </div>

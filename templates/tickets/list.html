@@ -3,8 +3,8 @@
 
 {% block page_desc %}
   <p class="page-header__desc">
-    {{ page_obj.paginator.count }} tiket
-    {% if has_filter %}cocok dengan filter{% else %}tercatat{% endif %}.
+    {{ page_obj.paginator.count }} ticket{% if page_obj.paginator.count != 1 %}s{% endif %}
+    {% if has_filter %}matching current filter{% else %}recorded{% endif %}.
   </p>
 {% endblock %}
 
@@ -12,20 +12,20 @@
   <a href="{% url 'tickets:create' %}" class="btn btn--primary">
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9"
          stroke-linecap="round" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11"/></svg>
-    Tiket Baru
+    New Ticket
   </a>
 {% endblock %}
 
 {% block content %}
 <div class="tickets-layout">
 
-  {# ── Kolom utama ───────────────────────────────────────────────────── #}
+  {# ── Main column ───────────────────────────────────────────────────── #}
   <div>
-    {# Pintasan status — cara tercepat menyaring, di atas daftar #}
+    {# Status shortcuts #}
     <div class="filterbar">
       <div class="chips">
-        <a href="{% url 'tickets:list' %}" class="chip {% if not selected.status and not selected.assignee %}is-active{% endif %}">
-          Semua <span class="chip__count">{{ facets.all }}</span>
+        <a href="{% url 'tickets:list' %}" class="chip {% if not selected.status and not selected.assignee and not selected.high_priority %}is-active{% endif %}">
+          All <span class="chip__count">{{ facets.all }}</span>
         </a>
         <a href="?status=open" class="chip {% if 'open'|in_list:selected.status %}is-active{% endif %}">
           Open <span class="chip__count">{{ facets.open }}</span>
@@ -34,13 +34,10 @@
           Outstanding <span class="chip__count">{{ facets.outstanding }}</span>
         </a>
         <a href="?status=closed" class="chip {% if 'closed'|in_list:selected.status %}is-active{% endif %}">
-          Close <span class="chip__count">{{ facets.closed }}</span>
+          Closed <span class="chip__count">{{ facets.closed }}</span>
         </a>
-        <a href="?assignee=me" class="chip {% if selected.assignee == 'me' %}is-active{% endif %}">
-          Tiket saya <span class="chip__count">{{ facets.mine }}</span>
-        </a>
-        <a href="?assignee=none" class="chip {% if selected.assignee == 'none' %}is-active{% endif %}">
-          Belum ditugaskan <span class="chip__count">{{ facets.unassigned }}</span>
+        <a href="?high_priority=1" class="chip {% if selected.high_priority == '1' %}is-active{% endif %}" style="color:var(--danger-700)">
+          <span class="badge__dot" style="background:var(--danger-500);width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:4px"></span>High Priority <span class="chip__count">{{ facets.high_priority }}</span>
         </a>
       </div>
 
@@ -52,17 +49,17 @@
             {% for v in value %}<input type="hidden" name="{{ key }}" value="{{ v }}">{% endfor %}
           {% endif %}
         {% endfor %}
-        <label for="ticket-sort" class="sr-only">Urutkan</label>
+        <label for="ticket-sort" class="sr-only">Sort by</label>
         <select name="sort" id="ticket-sort" class="form-select"
                 style="height:28px;padding:1px 30px 1px 10px;font-size:12.5px;width:auto"
                 onchange="this.form.submit()">
           {% for value, label in sorts %}
             <option value="{{ value }}" {% if selected.sort == value %}selected{% endif %}>
-              Urutkan: {{ label }}
+              Sort by: {{ label }}
             </option>
           {% endfor %}
         </select>
-        <noscript><button type="submit" class="btn btn--secondary btn--sm">Urutkan</button></noscript>
+        <noscript><button type="submit" class="btn btn--secondary btn--sm">Sort</button></noscript>
       </form>
     </div>
 
@@ -71,39 +68,39 @@
       <input type="hidden" name="next" value="{{ request.get_full_path }}">
 
       <div class="card">
-        {# Baris aksi massal, muncul setelah ada tiket yang dicentang #}
+        {# Bulk action bar #}
         <div class="bulkbar" data-bulkbar hidden>
-          <span class="bulkbar__count"><span data-bulk-count>0</span> tiket dipilih</span>
-          <label for="bulk-action" class="sr-only">Aksi massal</label>
+          <span class="bulkbar__count"><span data-bulk-count>0</span> tickets selected</span>
+          <label for="bulk-action" class="sr-only">Bulk action</label>
           <select name="action" id="bulk-action" class="form-select"
                   style="height:28px;padding:1px 30px 1px 10px;font-size:12.5px;width:auto">
-            <option value="">Pilih aksi…</option>
-            <option value="status:open">Tandai Open</option>
-            <option value="status:outstanding">Tandai Outstanding</option>
-            <option value="status:closed">Tandai Close</option>
-            <option value="assign:me">Tugaskan ke saya</option>
+            <option value="">Select action…</option>
+            <option value="status:open">Mark as Open</option>
+            <option value="status:outstanding">Mark as Outstanding</option>
+            <option value="status:closed">Mark as Closed</option>
+            <option value="assign:me">Assign to me</option>
           </select>
-          <button type="submit" class="btn btn--primary btn--sm">Terapkan</button>
-          <button type="button" class="btn btn--ghost btn--sm" data-bulk-clear>Batal</button>
+          <button type="submit" class="btn btn--primary btn--sm">Apply</button>
+          <button type="button" class="btn btn--ghost btn--sm" data-bulk-clear>Cancel</button>
         </div>
 
         <div class="table-toolbar">
           <label class="check" style="padding:0">
             <input type="checkbox" data-check-all>
-            <span class="text-sm">Pilih semua di halaman ini</span>
+            <span class="text-sm">Select all on this page</span>
           </label>
           <span class="table-toolbar__spacer"></span>
           <span class="text-sm muted">
-            Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
           </span>
         </div>
 
         <ul class="tlist">
           {% for ticket in page_obj %}
-            <li class="tlist__row {% if not ticket.is_closed %}is-unresolved{% endif %} {% if ticket.priority == 'urgent' and not ticket.is_closed %}is-urgent{% endif %}">
+            <li class="tlist__row {% if not ticket.is_closed %}is-unresolved{% endif %} {% if ticket.is_high_priority %}is-urgent{% endif %}">
               <span class="tlist__check">
                 <input type="checkbox" name="selected" value="{{ ticket.number }}"
-                       data-row-check aria-label="Pilih tiket {{ ticket.number }}"
+                       data-row-check aria-label="Select ticket {{ ticket.number }}"
                        style="width:15px;height:15px;accent-color:var(--navy-600)">
               </span>
 
@@ -117,9 +114,14 @@
                 <div class="tlist__top">
                   <a href="{{ ticket.get_absolute_url }}" class="tlist__subject">{{ ticket.subject }}</a>
                   <span class="badge {{ ticket.type_badge }}">{{ ticket.get_ticket_type_display }}</span>
+                  {% if ticket.is_high_priority %}
+                    <span class="badge badge--danger">
+                      <span class="badge__dot"></span>High Priority
+                    </span>
+                  {% endif %}
                   {% if ticket.is_overdue %}
                     <span class="badge badge--danger">
-                      <span class="badge__dot"></span>Lewat target
+                      <span class="badge__dot"></span>Overdue
                     </span>
                   {% endif %}
                 </div>
@@ -146,22 +148,20 @@
                 <span class="badge {{ ticket.status_badge }}">
                   <span class="badge__dot"></span>{{ ticket.get_status_display }}
                 </span>
-                <span class="badge {{ ticket.priority_badge }}">{{ ticket.get_priority_display }}</span>
-                {% if ticket.assignee %}
-                  <span class="row text-xs muted" style="gap:5px">
-                    <span class="avatar avatar--sm {{ ticket.assignee.display_name|avatar_color }}">
-                      {{ ticket.assignee.initials }}
-                    </span>
-                    {{ ticket.assignee.display_name }}
+                <span class="badge {{ ticket.priority_badge }}">Level: {{ ticket.get_priority_display }}</span>
+                {% if ticket.requester_phone %}
+                  <span class="text-xs muted" title="PIC Number">
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:12px;height:12px;vertical-align:-2px;margin-right:2px"><path d="M4 4h12v12H4z"/><path d="M4 8h12M4 12h12"/></svg>
+                    {{ ticket.requester_phone }}
                   </span>
                 {% else %}
-                  <span class="text-xs muted">Belum ditugaskan</span>
+                  <span class="text-xs muted">No PIC number</span>
                 {% endif %}
                 <span class="tlist__time">
                   {% if ticket.is_closed %}
-                    Ditutup {{ ticket.closed_at|relative_time }}
+                    Closed {{ ticket.closed_at|relative_time }}
                   {% else %}
-                    Dibuka {{ ticket.opened_at|relative_time }}
+                    Opened {{ ticket.opened_at|relative_time }}
                   {% endif %}
                 </span>
               </div>
@@ -173,13 +173,13 @@
                      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/>
                 </svg>
-                <div class="empty__title">Tidak ada tiket yang cocok</div>
+                <div class="empty__title">No matching tickets found</div>
                 <div class="empty__desc">
-                  Coba longgarkan filter di panel kanan, atau buat tiket baru.
+                  Try broadening the filters on the right panel, or create a new ticket.
                 </div>
                 <div class="row" style="justify-content:center">
-                  <a href="{% url 'tickets:list' %}" class="btn btn--secondary">Hapus semua filter</a>
-                  <a href="{% url 'tickets:create' %}" class="btn btn--primary">Buat Tiket</a>
+                  <a href="{% url 'tickets:list' %}" class="btn btn--secondary">Clear all filters</a>
+                  <a href="{% url 'tickets:create' %}" class="btn btn--primary">New Ticket</a>
                 </div>
               </div>
             </li>
@@ -195,7 +195,7 @@
     </form>
   </div>
 
-  {# ── Panel filter ──────────────────────────────────────────────────── #}
+  {# ── Filter panel ──────────────────────────────────────────────────── #}
   <aside class="filter-panel">
     <form method="get" id="filter-form">
       <div class="filter-panel__head">
@@ -204,17 +204,17 @@
              style="color:var(--ink-400)" aria-hidden="true">
           <path d="M3 5h14M5.5 10h9M8.5 15h3"/>
         </svg>
-        <h3>Filter</h3>
+        <h3>Filters</h3>
         {% if has_filter %}
-          <span class="badge badge--info" style="margin-left:auto">Aktif</span>
+          <span class="badge badge--info" style="margin-left:auto">Active</span>
         {% endif %}
       </div>
 
       <div class="filter-panel__body">
         <div class="filter-group">
-          <div class="filter-group__title">Kata kunci</div>
+          <div class="filter-group__title">Keywords</div>
           <input type="search" name="q" value="{{ selected.q }}" class="form-input"
-                 placeholder="No. tiket, subjek, site…">
+                 placeholder="Ticket ID, subject, site…">
         </div>
 
         <div class="filter-group">
@@ -229,7 +229,7 @@
         </div>
 
         <div class="filter-group">
-          <div class="filter-group__title">Tipe</div>
+          <div class="filter-group__title">Type</div>
           {% for value, label in types %}
             <label class="check">
               <input type="checkbox" name="type" value="{{ value }}"
@@ -240,7 +240,7 @@
         </div>
 
         <div class="filter-group">
-          <div class="filter-group__title">Prioritas</div>
+          <div class="filter-group__title">Level</div>
           {% for value, label in priorities %}
             <label class="check">
               <input type="checkbox" name="priority" value="{{ value }}"
@@ -251,46 +251,29 @@
         </div>
 
         <div class="filter-group">
-          <div class="filter-group__title">Person In Charge</div>
-          <label for="f-assignee" class="sr-only">Person In Charge</label>
-          <select name="assignee" id="f-assignee" class="form-select">
-            <option value="">Semua agent</option>
-            <option value="me" {% if selected.assignee == "me" %}selected{% endif %}>Saya</option>
-            <option value="none" {% if selected.assignee == "none" %}selected{% endif %}>Belum ditugaskan</option>
-            {% for agent in agents %}
-              <option value="{{ agent.id }}" {% if selected.assignee == agent.id|stringformat:"s" %}selected{% endif %}>
-                {{ agent.display_name }}
-              </option>
-            {% endfor %}
-          </select>
+          <div class="filter-group__title">Special Priority</div>
+          <label class="check">
+            <input type="checkbox" name="high_priority" value="1"
+                   {% if selected.high_priority == "1" %}checked{% endif %}>
+            High Priority only (>5 days PR/FR, >2 mos RC)
+          </label>
         </div>
 
         <div class="filter-group">
-          <div class="filter-group__title">Grup penanganan</div>
-          <label for="f-group" class="sr-only">Grup penanganan</label>
-          <select name="group" id="f-group" class="form-select">
-            <option value="">Semua grup</option>
-            {% for value, label in groups %}
-              <option value="{{ value }}" {% if selected.group == value %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <div class="filter-group__title">Rentang tanggal dibuat</div>
+          <div class="filter-group__title">Date range created</div>
           <div class="daterange" style="flex-wrap:wrap">
             <input type="date" name="from" value="{{ range.start_date|date:'Y-m-d' }}"
-                   aria-label="Dari tanggal">
+                   aria-label="From date">
             <span>–</span>
             <input type="date" name="to" value="{{ range.end_date|date:'Y-m-d' }}"
-                   aria-label="Sampai tanggal">
+                   aria-label="To date">
           </div>
-          <div class="form-help">Kosongkan untuk menampilkan seluruh periode.</div>
+          <div class="form-help">Leave blank to display all periods.</div>
         </div>
       </div>
 
       <div class="filter-panel__foot">
-        <button type="submit" class="btn btn--primary btn--sm btn--block">Terapkan filter</button>
+        <button type="submit" class="btn btn--primary btn--sm btn--block">Apply filters</button>
         <a href="{% url 'tickets:list' %}" class="btn btn--secondary btn--sm">Reset</a>
       </div>
     </form>

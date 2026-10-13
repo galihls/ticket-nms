@@ -3,9 +3,8 @@
 
 {% block page_desc %}
   <p class="page-header__desc">
-    {{ page_obj.paginator.count }} artikel
-    {% if selected.q %}cocok dengan "{{ selected.q }}"{% endif %}
-    {% if folder %}· {{ folder.description }}{% endif %}
+    {{ page_obj.paginator.count }} articles
+    {% if selected.q %}matching "{{ selected.q }}"{% endif %}
   </p>
 {% endblock %}
 
@@ -24,11 +23,11 @@
     <div class="filterbar">
       <div class="chips">
         <a href="{% url 'solutions:browse' %}"
-           class="chip {% if not selected.kategori and not selected.folder %}is-active{% endif %}">
-          Semua kategori
+           class="chip {% if not selected.kategori %}is-active{% endif %}">
+          All categories
         </a>
         {% for value, label in categories %}
-          <a href="?{% qs kategori=value folder=None %}"
+          <a href="?{% qs kategori=value %}"
              class="chip {% if selected.kategori == value %}is-active{% endif %}">{{ label }}</a>
         {% endfor %}
       </div>
@@ -41,17 +40,17 @@
             <input type="hidden" name="{{ key }}" value="{{ value }}">
           {% endif %}
         {% endfor %}
-        <label for="kb-sort" class="sr-only">Urutkan</label>
+        <label for="kb-sort" class="sr-only">Sort</label>
         <select name="sort" id="kb-sort" class="form-select"
                 style="height:28px;padding:1px 30px 1px 10px;font-size:12.5px;width:auto"
                 onchange="this.form.submit()">
           {% for value, label in sorts %}
             <option value="{{ value }}" {% if selected.sort == value %}selected{% endif %}>
-              Urutkan: {{ label }}
+              Sort: {{ label }}
             </option>
           {% endfor %}
         </select>
-        <noscript><button type="submit" class="btn btn--secondary btn--sm">Urutkan</button></noscript>
+        <noscript><button type="submit" class="btn btn--secondary btn--sm">Sort</button></noscript>
       </form>
     </div>
 
@@ -68,17 +67,16 @@
               </span>
               <span class="badge {{ article.category_badge }}">{{ article.category_label }}</span>
               {% if article.status != "published" %}
-                <span class="badge badge--warn">Draf</span>
+                <span class="badge badge--warn">Draft</span>
               {% endif %}
             </div>
 
             <div class="kb-article__meta">
-              <span class="badge badge--neutral">{{ article.folder.name }}</span>
               {% for tag in article.tag_list %}
                 <span class="text-xs muted">#{{ tag }}</span>
               {% endfor %}
               <span class="spacer"></span>
-              <span>{{ article.views }} dilihat</span>
+              <span>{{ article.views }} views</span>
               <span class="dot">·</span>
               <span>{{ article.updated_at|relative_time }}</span>
             </div>
@@ -90,12 +88,12 @@
               <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5Z"/>
               <path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5Z"/>
             </svg>
-            <div class="empty__title">Belum ada artikel yang cocok</div>
+            <div class="empty__title">No matching articles found</div>
             <div class="empty__desc">
-              Coba kata kunci lain, atau tulis artikel baru dari tiket yang sudah Anda tangani.
+              Try different search terms, or create a new article from a resolved ticket.
             </div>
             <div class="row" style="justify-content:center">
-              <a href="{% url 'solutions:browse' %}" class="btn btn--secondary">Reset filter</a>
+              <a href="{% url 'solutions:browse' %}" class="btn btn--secondary">Reset filters</a>
               <a href="{% url 'solutions:create' %}" class="btn btn--primary">Create Article</a>
             </div>
           </div>
@@ -113,41 +111,29 @@
   <aside class="filter-panel">
     <form method="get">
       <div class="filter-panel__head">
-        <h3>Telusuri</h3>
+        <h3>Search &amp; Filter</h3>
       </div>
       <div class="filter-panel__body">
         <div class="filter-group">
-          <div class="filter-group__title">Kata kunci</div>
+          <div class="filter-group__title">Keywords</div>
           <input type="search" name="q" value="{{ selected.q }}" class="form-input"
-                 placeholder="Gejala, perangkat, error…">
+                 placeholder="Symptoms, devices, error…">
         </div>
 
         <div class="filter-group">
-          <div class="filter-group__title">Kategori</div>
-          <label for="kb-kategori" class="sr-only">Kategori</label>
+          <div class="filter-group__title">Category</div>
+          <label for="kb-kategori" class="sr-only">Category</label>
           <select name="kategori" id="kb-kategori" class="form-select">
-            <option value="">Semua kategori</option>
+            <option value="">All categories</option>
             {% for value, label in categories %}
               <option value="{{ value }}" {% if selected.kategori == value %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
           </select>
         </div>
 
-        <div class="filter-group">
-          <div class="filter-group__title">Folder</div>
-          <label for="kb-folder" class="sr-only">Folder</label>
-          <select name="folder" id="kb-folder" class="form-select">
-            <option value="">Semua folder</option>
-            {% for f in folders %}
-              <option value="{{ f.slug }}" {% if selected.folder == f.slug %}selected{% endif %}>
-                {{ f.get_category_display }} · {{ f.name }}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
       </div>
       <div class="filter-panel__foot">
-        <button type="submit" class="btn btn--primary btn--sm btn--block">Terapkan</button>
+        <button type="submit" class="btn btn--primary btn--sm btn--block">Apply</button>
         <a href="{% url 'solutions:browse' %}" class="btn btn--secondary btn--sm">Reset</a>
       </div>
     </form>

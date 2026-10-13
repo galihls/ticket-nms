@@ -6,34 +6,34 @@
 {% block content %}
 
 <div class="kb-hero">
-  <h2>Pusat Panduan &amp; Solusi</h2>
+  <h2>Knowledge Base &amp; Solutions</h2>
   <p>
-    Kumpulan panduan troubleshooting dan solusi atas isu yang sudah ditangani
-    agent lain. Cari dulu di sini sebelum menangani tiket dari nol.
+    Troubleshooting guides and solutions compiled from resolved tickets.
+    Search here before handling tickets from scratch.
   </p>
   <form class="kb-hero__search" action="{% url 'solutions:browse' %}" method="get">
-    <label for="kb-search" class="sr-only">Cari solusi</label>
+    <label for="kb-search" class="sr-only">Search solutions</label>
     <input type="search" id="kb-search" name="q" value="{{ request.GET.q }}"
-           placeholder="Cari gejala, perangkat, atau kode error…">
+           placeholder="Search symptoms, devices, or error codes…">
     <button type="submit" class="btn btn--accent btn--lg">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"
            stroke-linecap="round" aria-hidden="true">
         <circle cx="9" cy="9" r="5.5"/><path d="m13.2 13.2 3.3 3.3"/>
       </svg>
-      Cari
+      Search
     </button>
   </form>
 </div>
 
 <div class="page-header">
   <div class="page-header__text">
-    <h1>Kategori Solusi</h1>
+    <h1>Solution Categories</h1>
     <p class="page-header__desc">
-      {{ total }} artikel terbit, terbagi dalam dua kategori.
+      {{ total }} published articles across two categories.
     </p>
   </div>
   <div class="page-header__actions">
-    <a href="{% url 'solutions:browse' %}" class="btn btn--secondary">Jelajahi semua</a>
+    <a href="{% url 'solutions:browse' %}" class="btn btn--secondary">Browse all</a>
     <a href="{% url 'solutions:create' %}" class="btn btn--primary">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9"
            stroke-linecap="round" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11"/></svg>
@@ -67,34 +67,14 @@
         <div>
           <div class="card__title">{{ cat.label }}</div>
           <div class="card__subtitle">
-            {{ cat.folders|length }} folder · {{ cat.count }} artikel
+            {{ cat.count }} articles
           </div>
         </div>
         <div class="card__actions">
           <a href="{% url 'solutions:browse' %}?kategori={{ cat.value }}"
-             class="btn btn--ghost btn--sm">Lihat semua</a>
+             class="btn btn--ghost btn--sm">View all</a>
         </div>
       </div>
-
-      {% for folder in cat.folders %}
-        <a href="{% url 'solutions:browse' %}?folder={{ folder.slug }}" class="kb-folder">
-          <span class="kb-folder__icon">
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
-                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M2.5 6a1.5 1.5 0 0 1 1.5-1.5h3.2l1.5 2h6.8A1.5 1.5 0 0 1 17 8v6.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5Z"/>
-            </svg>
-          </span>
-          <span>
-            <span class="kb-folder__name">{{ folder.name }}</span>
-            <span class="kb-folder__desc">{{ folder.description }}</span>
-          </span>
-          <span class="kb-folder__count">{{ folder.n }} artikel</span>
-        </a>
-      {% empty %}
-        <div class="empty" style="padding:28px 16px">
-          <div class="empty__desc mb-0">Belum ada folder pada kategori ini.</div>
-        </div>
-      {% endfor %}
     </div>
   {% endfor %}
 </div>
@@ -102,9 +82,9 @@
 <div class="grid grid--2">
   <div class="card">
     <div class="card__header">
-      <div class="card__title">Paling Sering Dibuka</div>
+      <div class="card__title">Most Viewed</div>
       <div class="card__actions">
-        <a href="{% url 'solutions:browse' %}?sort=-views" class="btn btn--ghost btn--sm">Lihat semua</a>
+        <a href="{% url 'solutions:browse' %}?sort=-views" class="btn btn--ghost btn--sm">View all</a>
       </div>
     </div>
     <div class="card__body card__body--flush">
@@ -113,18 +93,17 @@
           <div class="kb-article__title">{{ article.title }}</div>
           <div class="kb-article__meta">
             <span class="badge {{ article.category_badge }}">{{ article.category_label }}</span>
-            <span>{{ article.folder.name }}</span>
             <span class="dot">·</span>
-            <span>{{ article.views }} kali dilihat</span>
+            <span>{{ article.views }} views</span>
             {% if article.helpful_percent %}
               <span class="dot">·</span>
-              <span>{{ article.helpful_percent }}% menilai membantu</span>
+              <span>{{ article.helpful_percent }}% found helpful</span>
             {% endif %}
           </div>
         </a>
       {% empty %}
         <div class="empty" style="padding:36px 16px">
-          <div class="empty__desc mb-0">Belum ada artikel.</div>
+          <div class="empty__desc mb-0">No articles yet.</div>
         </div>
       {% endfor %}
     </div>
@@ -132,9 +111,9 @@
 
   <div class="card">
     <div class="card__header">
-      <div class="card__title">Terbaru Diperbarui</div>
+      <div class="card__title">Recently Updated</div>
       <div class="card__actions">
-        <a href="{% url 'solutions:browse' %}" class="btn btn--ghost btn--sm">Lihat semua</a>
+        <a href="{% url 'solutions:browse' %}" class="btn btn--ghost btn--sm">View all</a>
       </div>
     </div>
     <div class="card__body card__body--flush">
@@ -146,15 +125,15 @@
             <span class="avatar avatar--sm {{ article.author.display_name|avatar_color }}">
               {{ article.author.initials|default:"??" }}
             </span>
-            <span>{{ article.author.display_name|default:"Sistem" }}</span>
+            <span>{{ article.author.display_name|default:"System" }}</span>
             <span class="dot">·</span>
             <span>{{ article.updated_at|relative_time }}</span>
           </div>
         </a>
       {% empty %}
         <div class="empty" style="padding:36px 16px">
-          <div class="empty__title">Belum ada artikel solusi</div>
-          <div class="empty__desc">Tulis artikel pertama dari tiket yang sudah selesai.</div>
+          <div class="empty__title">No solution articles yet</div>
+          <div class="empty__desc">Write the first article from a resolved ticket.</div>
           <a href="{% url 'solutions:create' %}" class="btn btn--primary">Create Article</a>
         </div>
       {% endfor %}

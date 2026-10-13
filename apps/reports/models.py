@@ -7,23 +7,23 @@ from django.utils import timezone
 
 class ReportExport(models.Model):
     class Period(models.TextChoices):
-        DAILY = "daily", "Harian"
-        MONTHLY = "monthly", "Bulanan"
+        DAILY = "daily", "Daily"
+        MONTHLY = "monthly", "Monthly"
 
-    period = models.CharField("periode", max_length=16, choices=Period.choices)
-    date_from = models.DateField("dari tanggal")
-    date_to = models.DateField("sampai tanggal")
-    file_name = models.CharField("nama berkas", max_length=160)
-    row_count = models.PositiveIntegerField("jumlah baris", default=0)
+    period = models.CharField("period", max_length=16, choices=Period.choices)
+    date_from = models.DateField("from date")
+    date_to = models.DateField("to date")
+    file_name = models.CharField("file name", max_length=160)
+    row_count = models.PositiveIntegerField("row count", default=0)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="report_exports",
     )
-    created_at = models.DateTimeField("waktu", default=timezone.now, db_index=True)
+    created_at = models.DateTimeField("created at", default=timezone.now, db_index=True)
 
     class Meta:
-        verbose_name = "ekspor laporan"
-        verbose_name_plural = "ekspor laporan"
+        verbose_name = "report export"
+        verbose_name_plural = "report exports"
         ordering = ["-created_at", "-id"]
 
     def __str__(self):

@@ -10,27 +10,36 @@
         <span class="badge {{ ticket.status_badge }}">
           <span class="badge__dot"></span>{{ ticket.get_status_display }}
         </span>
-        <span class="badge {{ ticket.priority_badge }}">{{ ticket.get_priority_display }}</span>
+        <span class="badge {{ ticket.priority_badge }}">Level: {{ ticket.get_priority_display }}</span>
+        {% if ticket.is_high_priority %}
+          <span class="badge badge--danger"><span class="badge__dot"></span>High Priority</span>
+        {% endif %}
         {% if ticket.is_overdue %}
-          <span class="badge badge--danger"><span class="badge__dot"></span>Lewat target</span>
+          <span class="badge badge--danger"><span class="badge__dot"></span>Overdue</span>
         {% endif %}
       </div>
       <h1>{{ ticket.subject }}</h1>
       <p class="page-header__desc">
-        Dilaporkan {{ ticket.requester_name }}
+        Reported by {{ ticket.requester_name }}
         {% if ticket.company %}· {{ ticket.company }}{% endif %}
         · {{ ticket.opened_at|date:"d/m/Y H:i" }}
-        · Berjalan {{ ticket.duration_display }}
+        · Running for {{ ticket.duration_display }}
       </p>
     </div>
 
     <div class="page-header__actions">
+      {% if can_edit %}
+      {% if ticket.is_closed and not user.is_superuser %}
+        <span class="badge badge--warn" title="Only administrators can edit after this deadline">
+          Editable for another {{ ticket.edit_minutes_left }} min
+        </span>
+      {% endif %}
       <a href="{% url 'tickets:edit' ticket.number %}" class="btn btn--secondary">
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M4 16.3 14.6 5.7a2 2 0 0 0-2.8-2.8L1.2 13.5v2.8H4Z" transform="translate(2 0)"/>
         </svg>
-        Ubah
+        Edit
       </a>
 
       {% if ticket.is_closed %}
@@ -41,7 +50,7 @@
                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M3.5 10a6.5 6.5 0 1 0 1.9-4.6"/><path d="M3.5 3v3.5H7"/>
             </svg>
-            Buka Ulang
+            Reopen
           </button>
         </form>
       {% else %}
@@ -50,8 +59,17 @@
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="10" cy="10" r="7.5"/><path d="m6.6 10.2 2.3 2.3 4.5-4.9"/>
           </svg>
-          Tutup Tiket
+          Close Ticket
         </button>
+      {% endif %}
+      {% else %}
+        <span class="badge badge--neutral">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round" stroke-linejoin="round" width="12" height="12" aria-hidden="true">
+            <rect x="4.5" y="9" width="11" height="8" rx="1.5"/><path d="M7.5 9V6.8a2.5 2.5 0 0 1 5 0V9"/>
+          </svg>
+          Locked — only administrators can edit
+        </span>
       {% endif %}
     </div>
   </div>
@@ -60,19 +78,19 @@
 {% block content %}
 <div class="ticket-layout">
 
-  {# ── Percakapan ────────────────────────────────────────────────────── #}
+  {# ── Conversation ──────────────────────────────────────────────────── #}
   <div class="stack">
     <div class="card">
       <div class="card__header">
-        <div class="card__title">Percakapan</div>
-        <div class="card__subtitle">{{ replies|length }} balasan</div>
+        <div class="card__title">Conversation</div>
+        <div class="card__subtitle">{{ replies|length }} replies</div>
         <div class="card__actions">
           <span class="badge badge--neutral">{{ ticket.get_source_display }}</span>
         </div>
       </div>
 
       <ul class="conv">
-        {# Pesan pembuka: deskripsi dari pelapor #}
+        {# Opening message: requester description #}
         <li class="conv__item">
           <span class="avatar avatar--lg {{ ticket.requester_name|avatar_color }}">
             {{ ticket.requester_name|initials }}
@@ -80,10 +98,10 @@
           <div class="conv__body">
             <div class="conv__head">
               <span class="conv__author">{{ ticket.requester_name }}</span>
-              <span class="badge badge--neutral">Pelapor</span>
+              <span class="badge badge--neutral">Requester</span>
               <span class="conv__time">{{ ticket.opened_at|date:"d/m/Y H:i" }}</span>
             </div>
-            <div class="conv__text">{{ ticket.description|default:"(Tidak ada deskripsi)" }}</div>
+            <div class="conv__text">{{ ticket.description|default:"(No description provided)" }}</div>
             {% if ticket.tag_list %}
               <div class="row row--wrap mt-2" style="gap:5px">
                 {% for tag in ticket.tag_list %}
@@ -109,7 +127,7 @@
                       <rect x="5" y="9" width="10" height="7" rx="1.5"/>
                       <path d="M7.5 9V6.8a2.5 2.5 0 0 1 5 0V9"/>
                     </svg>
-                    Catatan internal
+                    Internal note
                   </span>
                 {% else %}
                   <span class="badge badge--teal">Agent</span>
@@ -130,59 +148,48 @@
             </span>
             <div class="conv__body">
               <div class="conv__head">
-                <span class="conv__author">Tiket ditutup</span>
+                <span class="conv__author">Ticket closed</span>
                 <span class="conv__time">{{ ticket.closed_at|date:"d/m/Y H:i" }}</span>
               </div>
               <div class="conv__text">{{ ticket.close_reason }}</div>
               <div class="text-xs muted mt-2">
-                Total durasi penanganan: <strong>{{ ticket.duration_display }}</strong>
+                Total resolution duration: <strong>{{ ticket.duration_display }}</strong>
               </div>
             </div>
           </li>
         {% endif %}
       </ul>
 
-      {# ── Kotak balasan ──────────────────────────────────────────────── #}
+      {# ── Reply box ──────────────────────────────────────────────── #}
+      {% if can_edit %}
       <div class="replybox">
         <form method="post" action="{% url 'tickets:reply' ticket.number %}" data-guard>
           {% csrf_token %}
 
-          <div class="replybox__tabs segmented">
-            <span class="segmented__item">
-              <input type="radio" name="is_private" value="" id="reply-public" checked>
-              <label class="segmented__label" for="reply-public">Balas pelapor</label>
-            </span>
-            <span class="segmented__item">
-              <input type="radio" name="is_private" value="on" id="reply-private">
-              <label class="segmented__label" for="reply-private">Catatan internal</label>
-            </span>
-          </div>
-
-          <label for="{{ reply_form.body.id_for_label }}" class="sr-only">Balasan</label>
+          <input type="hidden" name="is_private" value="on">
+          <label for="{{ reply_form.body.id_for_label }}" class="sr-only">Internal Note</label>
           {{ reply_form.body }}
 
           <div class="row mt-2">
-            <span class="text-xs muted">
-              Membalas tiket Open otomatis mengubah statusnya menjadi Outstanding.
-            </span>
             <span class="spacer"></span>
             <button type="submit" class="btn btn--primary">
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M17 3 9 11M17 3l-5.2 14-2.6-6-6-2.6L17 3Z"/>
               </svg>
-              Kirim
+              Send
             </button>
           </div>
         </form>
       </div>
+      {% endif %}
     </div>
 
     {# Riwayat perubahan #}
     <div class="card">
       <div class="card__header">
-        <div class="card__title">Riwayat Perubahan</div>
-        <div class="card__subtitle">Jejak audit tiket ini</div>
+        <div class="card__title">Change History</div>
+        <div class="card__subtitle">Audit trail for this ticket</div>
       </div>
       <div class="card__body">
         <ul class="timeline">
@@ -200,7 +207,7 @@
           {% empty %}
             <li>
               <span class="timeline__dot"></span>
-              <div class="timeline__title muted">Belum ada perubahan tercatat.</div>
+              <div class="timeline__title muted">No changes recorded yet.</div>
             </li>
           {% endfor %}
         </ul>
@@ -210,9 +217,11 @@
 
   {# ── Panel properti ────────────────────────────────────────────────── #}
   <aside class="stack">
+  {# ── Panel properti ────────────────────────────────────────────────── #}
+  <aside class="stack">
     <div class="card">
       <div class="card__header">
-        <div class="card__title">Properti</div>
+        <div class="card__title">Properties</div>
       </div>
       <div class="card__body">
         <form method="post" action="{% url 'tickets:properties' ticket.number %}" class="props">
@@ -220,7 +229,7 @@
 
           <div class="props__field">
             <label class="props__label" for="p-status">Status</label>
-            <select name="status" id="p-status" class="form-select">
+            <select name="status" id="p-status" class="form-select" {% if not can_edit %}disabled{% endif %}>
               {% for value, label in statuses %}
                 <option value="{{ value }}" {% if ticket.status == value %}selected{% endif %}>{{ label }}</option>
               {% endfor %}
@@ -228,8 +237,8 @@
           </div>
 
           <div class="props__field">
-            <label class="props__label" for="p-priority">Prioritas</label>
-            <select name="priority" id="p-priority" class="form-select">
+            <label class="props__label" for="p-priority">Level</label>
+            <select name="priority" id="p-priority" class="form-select" {% if not can_edit %}disabled{% endif %}>
               {% for value, label in priorities %}
                 <option value="{{ value }}" {% if ticket.priority == value %}selected{% endif %}>{{ label }}</option>
               {% endfor %}
@@ -237,52 +246,34 @@
           </div>
 
           <div class="props__field">
-            <label class="props__label" for="p-type">Tipe</label>
-            <select name="ticket_type" id="p-type" class="form-select">
+            <label class="props__label" for="p-type">Type</label>
+            <select name="ticket_type" id="p-type" class="form-select" {% if not can_edit %}disabled{% endif %}>
               {% for value, label in types %}
                 <option value="{{ value }}" {% if ticket.ticket_type == value %}selected{% endif %}>{{ label }}</option>
               {% endfor %}
             </select>
             <div class="form-help">
-              Nomor tiket tidak ikut berubah setelah tiket dibuat.
+              Ticket number does not change after creation.
             </div>
           </div>
 
-          <div class="props__field">
-            <label class="props__label" for="p-assignee">Person In Charge</label>
-            <select name="assignee" id="p-assignee" class="form-select">
-              <option value="">— Belum ditugaskan —</option>
-              {% for agent in agents %}
-                <option value="{{ agent.id }}" {% if ticket.assignee_id == agent.id %}selected{% endif %}>
-                  {{ agent.display_name }}{% if agent.position %} · {{ agent.position }}{% endif %}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="props__field">
-            <label class="props__label" for="p-group">Grup</label>
-            <select name="group" id="p-group" class="form-select">
-              <option value="">— Tanpa grup —</option>
-              {% for value, label in groups %}
-                <option value="{{ value }}" {% if ticket.group == value %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <button type="submit" class="btn btn--primary btn--block">Simpan Perubahan</button>
+          {% if can_edit %}
+            <button type="submit" class="btn btn--primary btn--block">Save Changes</button>
+          {% else %}
+            <div class="form-help">Ticket locked. Only admins can edit properties.</div>
+          {% endif %}
         </form>
       </div>
     </div>
 
     <div class="card">
       <div class="card__header">
-        <div class="card__title">Informasi</div>
+        <div class="card__title">Information</div>
       </div>
       <div class="card__body">
         <div class="meta-list">
           <div class="meta-list__row">
-            <span class="meta-list__key">Pelapor</span>
+            <span class="meta-list__key">Requester</span>
             <span class="meta-list__val">{{ ticket.requester_name }}</span>
           </div>
           {% if ticket.requester_email %}
@@ -291,46 +282,72 @@
               <span class="meta-list__val truncate">{{ ticket.requester_email }}</span>
             </div>
           {% endif %}
+          {% if ticket.requester_phone %}
+            <div class="meta-list__row">
+              <span class="meta-list__key">Phone</span>
+              <span class="meta-list__val">{{ ticket.requester_phone }}</span>
+            </div>
+          {% endif %}
           {% if ticket.company %}
             <div class="meta-list__row">
-              <span class="meta-list__key">Unit</span>
+              <span class="meta-list__key">Company / Unit</span>
               <span class="meta-list__val">{{ ticket.company }}</span>
             </div>
           {% endif %}
+          {% if ticket.address %}
+            <div class="meta-list__row">
+              <span class="meta-list__key">Address</span>
+              <span class="meta-list__val">{{ ticket.address }}</span>
+            </div>
+          {% endif %}
+          {% if ticket.relocation_action %}
+            <div class="meta-list__row">
+              <span class="meta-list__key">Action</span>
+              <span class="meta-list__val"><strong>{{ ticket.get_relocation_action_display|default:ticket.relocation_action }}</strong></span>
+            </div>
+            {% if ticket.relocation_action == "Relokasi" %}
+              {% if ticket.new_site %}
+                <div class="meta-list__row">
+                  <span class="meta-list__key">New Site</span>
+                  <span class="meta-list__val"><span class="site-code">{{ ticket.new_site }}</span></span>
+                </div>
+              {% endif %}
+              {% if ticket.new_address %}
+                <div class="meta-list__row">
+                  <span class="meta-list__key">New Address</span>
+                  <span class="meta-list__val">{{ ticket.new_address }}</span>
+                </div>
+              {% endif %}
+            {% endif %}
+          {% endif %}
           {% if ticket.site_code %}
             <div class="meta-list__row">
-              <span class="meta-list__key">Kode site</span>
+              <span class="meta-list__key">Site Code</span>
               <span class="meta-list__val"><span class="site-code">{{ ticket.site_code }}</span></span>
             </div>
           {% endif %}
           <div class="meta-list__row">
-            <span class="meta-list__key">Sumber</span>
+            <span class="meta-list__key">Source</span>
             <span class="meta-list__val">{{ ticket.get_source_display }}</span>
           </div>
           <div class="meta-list__row">
-            <span class="meta-list__key">Waktu open</span>
+            <span class="meta-list__key">Opened at</span>
             <span class="meta-list__val">{{ ticket.opened_at|date:"d/m/Y H:i" }}</span>
           </div>
           <div class="meta-list__row">
-            <span class="meta-list__key">Target selesai</span>
-            <span class="meta-list__val">
-              {% if ticket.due_at %}{{ ticket.due_at|date:"d/m/Y H:i" }}{% else %}—{% endif %}
-            </span>
-          </div>
-          <div class="meta-list__row">
-            <span class="meta-list__key">Waktu close</span>
+            <span class="meta-list__key">Closed at</span>
             <span class="meta-list__val">
               {% if ticket.closed_at %}{{ ticket.closed_at|date:"d/m/Y H:i" }}{% else %}—{% endif %}
             </span>
           </div>
           <div class="meta-list__row">
-            <span class="meta-list__key">Durasi</span>
+            <span class="meta-list__key">Duration</span>
             <span class="meta-list__val">{{ ticket.duration_display }}</span>
           </div>
           <div class="meta-list__row">
-            <span class="meta-list__key">Dibuat oleh</span>
+            <span class="meta-list__key">Created by</span>
             <span class="meta-list__val">
-              {% if ticket.created_by %}{{ ticket.created_by.display_name }}{% else %}Sistem{% endif %}
+              {% if ticket.created_by %}{{ ticket.created_by.display_name }}{% else %}System{% endif %}
             </span>
           </div>
         </div>
@@ -340,7 +357,7 @@
     {% if related %}
       <div class="card">
         <div class="card__header">
-          <div class="card__title">Tiket Site Sama</div>
+          <div class="card__title">Same Site Tickets</div>
           <div class="card__subtitle">{{ ticket.site_code }}</div>
         </div>
         <div class="card__body card__body--flush">
@@ -369,11 +386,11 @@
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="9" cy="9" r="5.5"/><path d="m13.2 13.2 3.3 3.3"/>
           </svg>
-          Cari solusi terkait
+          Find related solutions
         </a>
         <a href="{% url 'solutions:create' %}?dari={{ ticket.number }}"
            class="btn btn--ghost btn--block mt-1">
-          Jadikan artikel solusi
+          Create solution article
         </a>
       </div>
     </div>
@@ -387,8 +404,8 @@
       {% csrf_token %}
 
       <div class="modal__head">
-        <h2 id="close-modal-title">Tutup Tiket {{ ticket.number }}</h2>
-        <button type="button" class="modal__close" data-modal-close aria-label="Tutup">
+        <h2 id="close-modal-title">Close Ticket {{ ticket.number }}</h2>
+        <button type="button" class="modal__close" data-modal-close aria-label="Close">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"
                stroke-linecap="round" aria-hidden="true"><path d="m5.5 5.5 9 9M14.5 5.5l-9 9"/></svg>
         </button>
@@ -396,35 +413,115 @@
 
       <div class="modal__body">
         <p class="text-sm muted mb-2">
-          Alasan penutupan tercatat pada audit trail dan ikut terbawa ke laporan Excel.
+          Closing reason is recorded in the audit trail and included in Excel reports.
         </p>
 
-        <div class="form-row">
-          <label class="form-label" for="{{ close_form.reason_category.id_for_label }}">
-            {{ close_form.reason_category.label }}<span class="req">*</span>
-          </label>
-          {{ close_form.reason_category }}
-        </div>
+        {% if ticket.ticket_type == "RC" %}
+          <div class="form-row">
+            <label class="form-label" for="id_relocation_action">
+              Closing Action<span class="req">*</span>
+            </label>
+            {{ close_form.relocation_action }}
+          </div>
 
-        <div class="form-row">
-          <label class="form-label" for="{{ close_form.reason.id_for_label }}">
-            {{ close_form.reason.label }}<span class="req">*</span>
-          </label>
-          {{ close_form.reason }}
-        </div>
+          <div id="rc-new-site-section">
+            <div class="form-row">
+              <label class="form-label" for="id_new_site">
+                New Site<span class="req">*</span>
+              </label>
+              {{ close_form.new_site }}
+            </div>
 
-        <label class="check">
-          {{ close_form.create_article }}
-          {{ close_form.create_article.label }}
-        </label>
-        <div class="form-help">{{ close_form.create_article.help_text }}</div>
+            <div class="form-row">
+              <label class="form-label" for="id_new_address">
+                New Address<span class="req">*</span>
+              </label>
+              {{ close_form.new_address }}
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label class="form-label" for="{{ close_form.reason.id_for_label }}">
+              {{ close_form.reason.label }}
+            </label>
+            {{ close_form.reason }}
+          </div>
+        {% else %}
+          <div class="form-row">
+            <label class="form-label" for="{{ close_form.reason_category.id_for_label }}">
+              {{ close_form.reason_category.label }}<span class="req">*</span>
+            </label>
+            {{ close_form.reason_category }}
+          </div>
+
+          <div class="form-row">
+            <label class="form-label" for="{{ close_form.reason.id_for_label }}">
+              {{ close_form.reason.label }}<span class="req">*</span>
+            </label>
+            {{ close_form.reason }}
+          </div>
+        {% endif %}
+
       </div>
 
       <div class="modal__foot">
-        <button type="button" class="btn btn--secondary" data-modal-close>Batal</button>
-        <button type="submit" class="btn btn--primary">Tutup Tiket</button>
+        <button type="button" class="btn btn--secondary" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn--primary">Close Ticket</button>
       </div>
     </form>
   </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const relActionSelect = document.getElementById("id_relocation_action");
+  const newSiteSection = document.getElementById("rc-new-site-section");
+
+  if (relActionSelect && newSiteSection) {
+    function toggleNewSiteFields() {
+      if (relActionSelect.value === "Dismantle") {
+        newSiteSection.style.display = "none";
+      } else {
+        newSiteSection.style.display = "block";
+      }
+    }
+    relActionSelect.addEventListener("change", toggleNewSiteFields);
+    toggleNewSiteFields();
+  }
+
+  const typeSelect = document.getElementById("p-type");
+  const prioritySelect = document.getElementById("p-priority");
+  if (typeSelect && prioritySelect) {
+    const allOptions = [
+      { value: "low", text: "Low" },
+      { value: "medium", text: "Medium" },
+      { value: "high", text: "High" }
+    ];
+    function syncPriority() {
+      const type = typeSelect.value;
+      const current = prioritySelect.value;
+      let allowed = ["low", "medium", "high"];
+      if (type === "FR") allowed = ["medium", "high"];
+      else if (type === "RC") allowed = ["medium"];
+
+      prioritySelect.innerHTML = "";
+      allOptions.forEach(opt => {
+        if (allowed.includes(opt.value)) {
+          const el = document.createElement("option");
+          el.value = opt.value;
+          el.textContent = opt.text;
+          prioritySelect.appendChild(el);
+        }
+      });
+      if (allowed.includes(current)) {
+        prioritySelect.value = current;
+      } else {
+        prioritySelect.value = "medium";
+      }
+    }
+    typeSelect.addEventListener("change", syncPriority);
+    syncPriority();
+  }
+});
+</script>
 {% endblock %}

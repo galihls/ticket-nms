@@ -10,57 +10,53 @@ from django.views.decorators.http import require_POST
 from apps.core.models import ActivityLog
 from apps.tickets.models import Ticket
 
-from .models import Article, Category, Folder
+from .models import Article, Category
 
 
 class ArticleForm(forms.ModelForm):
     class Meta:
         model = Article
-        fields = ["folder", "title", "summary", "body", "tags", "status"]
+        fields = ["category", "title", "summary", "body", "tags", "status"]
         widgets = {
             "title": forms.TextInput(attrs={
                 "class": "form-input",
-                "placeholder": "mis. Mengatasi link down akibat putus fiber",
+                "placeholder": "e.g. Resolving link down due to fiber cut",
             }),
             "summary": forms.TextInput(attrs={
                 "class": "form-input",
-                "placeholder": "Satu kalimat: artikel ini menjawab apa?",
+                "placeholder": "One sentence: what does this article solve?",
             }),
             "body": forms.Textarea(attrs={
                 "class": "form-textarea", "rows": 16,
-                "placeholder": "Gejala\n\nLangkah troubleshooting\n\nSolusi\n\n"
-                               "Pisahkan paragraf dengan satu baris kosong.",
+                "placeholder": "Symptoms\n\nTroubleshooting steps\n\nResolution\n\n"
+                               "Separate paragraphs with a blank line.",
             }),
             "tags": forms.TextInput(attrs={
                 "class": "form-input", "placeholder": "fiber, link-down, olt",
             }),
-            "folder": forms.Select(attrs={"class": "form-select"}),
+            "category": forms.Select(attrs={"class": "form-select"}),
             "status": forms.Select(attrs={"class": "form-select"}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["folder"].queryset = Folder.objects.all()
         self.fields["summary"].required = False
 
 
 @login_required
 def solution_home(request):
-    """Beranda knowledge base: dua kategori + folder + artikel populer."""
+    """Beranda knowledge base: dua kategori + artikel populer."""
     q = request.GET.get("q", "").strip()
     if q:
         return redirect(f"{reverse('solutions:browse')}?q={q}")
 
     categories = []
     for value, label in Category.choices:
-        folders = (Folder.objects.filter(category=value)
-                   .annotate(n=Count("articles",
-                                     filter=Q(articles__status=Article.Status.PUBLISHED))))
+        count = Article.objects.published().filter(category=value).count()
         categories.append({
             "value": value,
             "label": label,
-            "folders": folders,
-            "count": sum(f.n for f in folders),
+            "count": count,
             "badge": "badge--danger" if value == Category.PROBLEM else "badge--teal",
         })
 
@@ -68,19 +64,17 @@ def solution_home(request):
         "page_title": "Solutions",
         "breadcrumb": [("Solutions", None)],
         "categories": categories,
-        "popular": Article.objects.published().select_related("folder")
-                                  .order_by("-views")[:6],
-        "recent": Article.objects.published().select_related("folder", "author")[:6],
+        "popular": Article.objects.published().order_by("-views")[:6],
+        "recent": Article.objects.published().select_related("author")[:6],
         "total": Article.objects.published().count(),
     })
 
 
 @login_required
 def browse(request):
-    """Daftar artikel dengan filter kategori/folder/pencarian."""
-    qs = Article.objects.select_related("folder", "author")
+    """Daftar artikel dengan filter kategori/pencarian."""
+    qs = Article.objects.select_related("author")
     category = request.GET.get("kategori", "")
-    folder_slug = request.GET.get("folder", "")
     q = request.GET.get("q", "").strip()
     sort = request.GET.get("sort", "-updated_at")
 
@@ -88,11 +82,7 @@ def browse(request):
         qs = qs.published()
 
     if category in dict(Category.choices):
-        qs = qs.filter(folder__category=category)
-    folder = None
-    if folder_slug:
-        folder = get_object_or_404(Folder, slug=folder_slug)
-        qs = qs.filter(folder=folder)
+        qs = qs.filter(category=category)
     if q:
         qs = qs.filter(Q(title__icontains=q) | Q(body__icontains=q)
                        | Q(tags__icontains=q) | Q(summary__icontains=q))
@@ -102,28 +92,26 @@ def browse(request):
     qs = qs.order_by(sort)
 
     page = Paginator(qs, 12).get_page(request.GET.get("page"))
+    
+    category_label = dict(Category.choices).get(category)
 
     return render(request, "solutions/browse.html", {
-        "page_title": folder.name if folder else "Jelajahi Solusi",
+        "page_title": category_label if category_label else "Browse Solutions",
         "breadcrumb": [("Solutions", reverse("solutions:home")),
-                       (folder.name if folder else "Jelajahi", None)],
+                       (category_label if category_label else "Browse", None)],
         "page_obj": page,
         "categories": Category.choices,
-        "folders": Folder.objects.all(),
-        "selected": {"kategori": category, "folder": folder_slug, "q": q, "sort": sort},
-        "folder": folder,
-        "sorts": [("-updated_at", "Terbaru"), ("-views", "Paling dilihat"),
-                  ("-helpful", "Paling membantu"), ("title", "Judul A–Z")],
+        "selected": {"kategori": category, "q": q, "sort": sort},
+        "sorts": [("-updated_at", "Latest"), ("-views", "Most Viewed"),
+                  ("-helpful", "Most Helpful"), ("title", "Title A–Z")],
     })
 
 
 @login_required
 def article_detail(request, slug):
     article = get_object_or_404(
-        Article.objects.select_related("folder", "author"), slug=slug)
+        Article.objects.select_related("author"), slug=slug)
 
-    # Penghitung dilihat: cukup satu kali per sesi supaya angkanya tidak
-    # melonjak hanya karena agent me-refresh halaman.
     seen = request.session.setdefault("articles_seen", [])
     if article.pk not in seen:
         Article.objects.filter(pk=article.pk).update(views=article.views + 1)
@@ -132,23 +120,17 @@ def article_detail(request, slug):
         request.session.modified = True
 
     related = (Article.objects.published()
-               .filter(folder=article.folder).exclude(pk=article.pk)[:4])
+               .filter(category=article.category).exclude(pk=article.pk)[:4])
 
     return render(request, "solutions/detail.html", {
         "page_title": article.title,
         "breadcrumb": [("Solutions", reverse("solutions:home")),
-                       (article.folder.name, article.folder.get_absolute_url()),
+                       (article.category_label, reverse("solutions:browse") + f"?kategori={article.category}"),
                        (article.title, None)],
         "article": article,
         "related": related,
         "voted": article.pk in request.session.get("articles_voted", []),
     })
-
-
-@login_required
-def folder_detail(request, slug):
-    folder = get_object_or_404(Folder, slug=slug)
-    return redirect(f"{reverse('solutions:browse')}?folder={folder.slug}")
 
 
 @login_required
@@ -166,11 +148,11 @@ def article_create(request):
                         else Category.FEATURE)
             initial = {
                 "title": source_ticket.subject,
-                "summary": f"Solusi dari tiket {source_ticket.number}.",
+                "summary": f"Solution from ticket {source_ticket.number}.",
                 "body": (f"{source_ticket.description}\n\n"
-                         f"Penyelesaian\n\n{source_ticket.close_reason}"),
+                         f"Resolution\n\n{source_ticket.close_reason}"),
                 "tags": source_ticket.tags,
-                "folder": Folder.objects.filter(category=category).first(),
+                "category": category,
             }
 
     form = ArticleForm(request.POST or None, initial=initial)
@@ -182,19 +164,19 @@ def article_create(request):
 
         ActivityLog.record(
             request.user, ActivityLog.Verb.ARTICLE_CREATE,
-            target_label=article.folder.get_category_display(),
+            target_label=article.category_label,
             subject=article.title, status=article.get_status_display(),
             pic=request.user.display_name, url=article.get_absolute_url(),
         )
-        messages.success(request, "Artikel solusi tersimpan.")
+        messages.success(request, "Solution article saved.")
         return redirect(article)
 
     if request.method == "POST":
-        messages.error(request, "Periksa kembali isian yang ditandai merah.")
+        messages.error(request, "Please review the highlighted fields.")
 
     return render(request, "solutions/form.html", {
-        "page_title": "Buat Artikel Solusi",
-        "breadcrumb": [("Solutions", reverse("solutions:home")), ("Artikel Baru", None)],
+        "page_title": "Create Solution Article",
+        "breadcrumb": [("Solutions", reverse("solutions:home")), ("New Article", None)],
         "form": form,
         "source_ticket": source_ticket,
         "is_edit": False,
@@ -208,13 +190,13 @@ def article_edit(request, slug):
 
     if request.method == "POST" and form.is_valid():
         form.save()
-        messages.success(request, "Artikel diperbarui.")
+        messages.success(request, "Article updated.")
         return redirect(article)
 
     return render(request, "solutions/form.html", {
-        "page_title": f"Ubah: {article.title}",
+        "page_title": f"Edit: {article.title}",
         "breadcrumb": [("Solutions", reverse("solutions:home")),
-                       (article.title, article.get_absolute_url()), ("Ubah", None)],
+                       (article.title, article.get_absolute_url()), ("Edit", None)],
         "form": form,
         "article": article,
         "is_edit": True,
@@ -228,15 +210,15 @@ def article_vote(request, slug):
     voted = request.session.setdefault("articles_voted", [])
 
     if article.pk in voted:
-        messages.info(request, "Anda sudah menilai artikel ini.")
+        messages.info(request, "You have already voted on this article.")
         return redirect(article)
 
     if request.POST.get("vote") == "yes":
         Article.objects.filter(pk=article.pk).update(helpful=article.helpful + 1)
-        messages.success(request, "Terima kasih atas masukannya.")
+        messages.success(request, "Thank you for your feedback.")
     else:
         Article.objects.filter(pk=article.pk).update(not_helpful=article.not_helpful + 1)
-        messages.success(request, "Masukan tercatat — artikel akan ditinjau ulang.")
+        messages.success(request, "Feedback recorded — article will be reviewed.")
 
     voted.append(article.pk)
     request.session.modified = True

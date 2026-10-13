@@ -52,17 +52,17 @@ def _header_row(ws, row, headers, widths=None):
 
 
 def _sheet_rekap(wb, ctx):
-    ws = wb.create_sheet("Rekap")
-    _title_block(ws, f"Rekap {ctx['period_label']}", ctx["range_label"], 4)
+    ws = wb.create_sheet("Summary")
+    _title_block(ws, f"Summary — {ctx['period_label']}", ctx["range_label"], 4)
 
-    _header_row(ws, 4, ["Status", "Jumlah Tiket", "Persentase", "Keterangan"],
+    _header_row(ws, 4, ["Status", "Ticket Count", "Percentage", "Notes"],
                 [22, 16, 14, 44])
 
     total = ctx["counts"]["total"] or 1
     rows = [
-        ("Open", ctx["counts"]["open"], "Belum ditangani"),
-        ("Outstanding", ctx["counts"]["outstanding"], "Sedang ditangani / menunggu"),
-        ("Close", ctx["counts"]["closed"], "Selesai ditangani"),
+        ("Open", ctx["counts"]["open"], "Pending assignment / action"),
+        ("Outstanding", ctx["counts"]["outstanding"], "In progress / waiting"),
+        ("Close", ctx["counts"]["closed"], "Resolved / closed"),
     ]
     row_no = 5
     for label, value, note in rows:
@@ -88,14 +88,15 @@ def _sheet_rekap(wb, ctx):
         if col == 2:
             cell.alignment = Alignment(horizontal="center")
 
-    # Blok tipe tiket
+    # Ticket type block
     row_no += 2
-    ws.cell(row=row_no, column=1, value="Berdasarkan Tipe").font = Font(bold=True, size=11,
-                                                                       color=NAVY)
+    ws.cell(row=row_no, column=1, value="By Ticket Type").font = Font(bold=True, size=11,
+                                                                      color=NAVY)
     row_no += 1
-    _header_row(ws, row_no, ["Tipe", "Kode", "Jumlah", ""])
+    _header_row(ws, row_no, ["Type", "Code", "Count", ""])
     for label, code, value in [("Problem", "PR", ctx["type_counts"]["problem"]),
-                               ("Feature Request", "FR", ctx["type_counts"]["feature"])]:
+                               ("Feature Request", "FR", ctx["type_counts"]["feature"]),
+                               ("Relocation", "RC", ctx["type_counts"]["relocation"])]:
         row_no += 1
         ws.cell(row=row_no, column=1, value=label)
         ws.cell(row=row_no, column=2, value=code).alignment = Alignment(horizontal="center")
@@ -108,54 +109,92 @@ def _sheet_rekap(wb, ctx):
 
 
 def _sheet_detail(wb, ctx):
-    ws = wb.create_sheet("Detail Tiket")
-    _title_block(ws, "Detail Tiket", ctx["range_label"], 12)
+    ws = wb.create_sheet("Ticket Details")
 
-    headers = ["No. Tiket", "Tipe", "Subjek", "Kode Site", "Pelapor", "PIC",
-               "Prioritas", "Status", "Waktu Open", "Waktu Close", "Durasi",
-               "Alasan Close"]
-    _header_row(ws, 4, headers,
-                [14, 16, 42, 12, 20, 20, 12, 14, 18, 18, 12, 40])
+    from apps.tickets.models import Ticket
+    has_rc = any(t.ticket_type == Ticket.Type.RELOCATION for t in ctx["tickets"])
+
+    if has_rc:
+        headers = [
+            "Ticket ID", "Subject", "Status", "Level", "Type", 
+            "Problem Type", "Origin Address", "New Site", "New Address",
+            "Close Reason", "Agent", 
+            "Created time", "Closed time", "Company"
+        ]
+        col_widths = [14, 42, 14, 12, 16, 20, 30, 16, 30, 50, 20, 18, 18, 25]
+        wrap_cols = (2, 7, 9, 10)
+        center_cols = (3, 4, 5, 8, 12, 13)
+    else:
+        headers = [
+            "Ticket ID", "Subject", "Status", "Level", "Type", 
+            "Problem Type", "Close Reason", "Agent", 
+            "Created time", "Closed time", "Company"
+        ]
+        col_widths = [14, 42, 14, 12, 16, 20, 50, 20, 18, 18, 25]
+        wrap_cols = (2, 7)
+        center_cols = (3, 4, 5, 9, 10)
+
+    _title_block(ws, "Ticket Details", ctx["range_label"], len(headers))
+    _header_row(ws, 4, headers, col_widths)
 
     for i, ticket in enumerate(ctx["tickets"], start=5):
         opened = timezone.localtime(ticket.opened_at)
         closed = timezone.localtime(ticket.closed_at) if ticket.closed_at else None
         status_label = ticket.get_status_display()
+        agent_name = ticket.created_by.display_name if ticket.created_by else "—"
 
-        values = [
-            ticket.number,
-            ticket.get_ticket_type_display(),
-            ticket.subject,
-            ticket.site_code,
-            ticket.requester_name,
-            ticket.assignee.display_name if ticket.assignee else "—",
-            ticket.get_priority_display(),
-            status_label,
-            opened.strftime("%d/%m/%Y %H:%M"),
-            closed.strftime("%d/%m/%Y %H:%M") if closed else "—",
-            ticket.duration_display,
-            ticket.close_reason or "—",
-        ]
+        if has_rc:
+            values = [
+                ticket.number,
+                ticket.subject,
+                status_label,
+                ticket.get_priority_display(),
+                ticket.get_ticket_type_display(),
+                ticket.get_problem_category_display() if ticket.problem_category else "—",
+                ticket.address or "—",
+                ticket.new_site or "—",
+                ticket.new_address or "—",
+                ticket.close_reason or "—",
+                agent_name,
+                opened.strftime("%d/%m/%Y %H:%M"),
+                closed.strftime("%d/%m/%Y %H:%M") if closed else "—",
+                ticket.get_company_display() if ticket.company else "—",
+            ]
+        else:
+            values = [
+                ticket.number,
+                ticket.subject,
+                status_label,
+                ticket.get_priority_display(),
+                ticket.get_ticket_type_display(),
+                ticket.get_problem_category_display() if ticket.problem_category else "—",
+                ticket.close_reason or "—",
+                agent_name,
+                opened.strftime("%d/%m/%Y %H:%M"),
+                closed.strftime("%d/%m/%Y %H:%M") if closed else "—",
+                ticket.get_company_display() if ticket.company else "—",
+            ]
+
         for col, value in enumerate(values, start=1):
             cell = ws.cell(row=i, column=col, value=value)
             cell.border = BORDER
             cell.font = Font(size=10)
             cell.alignment = Alignment(vertical="top",
-                                       wrap_text=col in (3, 12),
-                                       horizontal="center" if col in (2, 4, 7, 8, 11) else "left")
-            if col == 8:
+                                       wrap_text=col in wrap_cols,
+                                       horizontal="center" if col in center_cols else "left")
+            if col == 3:
                 cell.fill = PatternFill("solid",
                                         fgColor=STATUS_FILL.get(status_label, "FFFFFF"))
-    ws.auto_filter.ref = f"A4:L{max(4, 4 + len(ctx['tickets']))}"
+
     return ws
 
 
 def _sheet_agents(wb, ctx):
-    ws = wb.create_sheet("Performa Agent")
-    _title_block(ws, "Performa Agent", ctx["range_label"], 6)
+    ws = wb.create_sheet("Agent Performance")
+    _title_block(ws, "Agent Performance", ctx["range_label"], 6)
 
-    _header_row(ws, 4, ["Agent", "Jabatan", "Open", "Outstanding", "Close",
-                        "Rasio Selesai"], [26, 22, 12, 16, 12, 16])
+    _header_row(ws, 4, ["Agent", "Position", "Open", "Outstanding", "Close",
+                        "Completion Rate"], [26, 22, 12, 16, 12, 16])
 
     for i, agent in enumerate(ctx["agents"], start=5):
         values = [agent["name"], agent["position"], agent["open"],
@@ -173,24 +212,33 @@ def _sheet_agents(wb, ctx):
     return ws
 
 
-def build_workbook(ctx):
+def build_workbook(ctx, report_type="detail"):
     """Susun workbook dari konteks laporan; kembalikan objek Workbook."""
     wb = Workbook()
     wb.remove(wb.active)
 
-    _sheet_rekap(wb, ctx)
-    _sheet_detail(wb, ctx)
-    _sheet_agents(wb, ctx)
+    if report_type == "rekap":
+        _sheet_rekap(wb, ctx)
+    elif report_type == "agent":
+        _sheet_agents(wb, ctx)
+    else:
+        _sheet_detail(wb, ctx)
 
-    wb.properties.title = f"Laporan {ctx['period_label']} — Ticketing NMS"
+    wb.properties.title = f"{ctx['period_label']} Report — Ticketing NMS"
     wb.properties.creator = ctx.get("author", "Ticketing NMS")
     return wb
 
 
-def file_name(period, date_range):
+def file_name(period, date_range, report_type="detail"):
+    prefix = {
+        "detail": "Ticket_Details",
+        "rekap": "Daily_Summary",
+        "agent": "Agent_Performance"
+    }.get(report_type, "Report")
+
     if period == "monthly":
-        return f"Laporan_Bulanan_{date_range.start_date.strftime('%Y-%m')}.xlsx"
+        return f"{prefix}_Monthly_{date_range.start_date.strftime('%Y-%m')}.xlsx"
     if date_range.start_date == date_range.end_date:
-        return f"Laporan_Harian_{date_range.start_date.strftime('%Y-%m-%d')}.xlsx"
-    return (f"Laporan_{date_range.start_date.strftime('%Y-%m-%d')}_"
+        return f"{prefix}_{date_range.start_date.strftime('%Y-%m-%d')}.xlsx"
+    return (f"{prefix}_{date_range.start_date.strftime('%Y-%m-%d')}_"
             f"{date_range.end_date.strftime('%Y-%m-%d')}.xlsx")

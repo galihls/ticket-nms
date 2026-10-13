@@ -3,7 +3,7 @@
 
 {% block page_desc %}
   <p class="page-header__desc">
-    Jejak seluruh aktivitas agent — siapa melakukan apa, kapan, dan pada tiket mana.
+    Audit trail of all agent activities — who did what, when, and on which ticket.
   </p>
 {% endblock %}
 
@@ -11,15 +11,15 @@
 
 <div class="filterbar">
   <form method="get" class="row row--wrap" style="gap:8px;width:100%">
-    <label for="log-q" class="sr-only">Cari</label>
+    <label for="log-q" class="sr-only">Search</label>
     <input type="search" name="q" id="log-q" value="{{ q }}" class="form-input"
-           placeholder="Cari subjek, agent, atau nomor tiket…"
+           placeholder="Search subject, agent, or ticket number…"
            style="height:30px;width:280px;font-size:13px">
 
-    <label for="log-verb" class="sr-only">Jenis aksi</label>
+    <label for="log-verb" class="sr-only">Action type</label>
     <select name="verb" id="log-verb" class="form-select"
             style="height:30px;padding:2px 30px 2px 10px;font-size:12.5px;width:auto">
-      <option value="">Semua aksi</option>
+      <option value="">All actions</option>
       {% for value, label in verbs %}
         <option value="{{ value }}" {% if selected_verb == value %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
@@ -28,7 +28,7 @@
     <label for="log-actor" class="sr-only">Agent</label>
     <select name="actor" id="log-actor" class="form-select"
             style="height:30px;padding:2px 30px 2px 10px;font-size:12.5px;width:auto">
-      <option value="">Semua agent</option>
+      <option value="">All agents</option>
       {% for agent in actors %}
         <option value="{{ agent.id }}" {% if selected_actor == agent.id|stringformat:"s" %}selected{% endif %}>
           {{ agent.display_name }}
@@ -36,12 +36,12 @@
       {% endfor %}
     </select>
 
-    <button type="submit" class="btn btn--primary btn--sm">Terapkan</button>
+    <button type="submit" class="btn btn--primary btn--sm">Apply</button>
     <a href="{% url 'core:activity_log' %}" class="btn btn--secondary btn--sm">Reset</a>
 
     <span class="filterbar__spacer"></span>
     <span class="filterbar__range">
-      <strong>{{ page_obj.paginator.count }}</strong> baris log
+      <strong>{{ page_obj.paginator.count }}</strong> log entries
     </span>
   </form>
 </div>
@@ -52,10 +52,10 @@
       <table class="table">
         <thead>
           <tr>
-            <th style="width:150px">Waktu</th>
+            <th style="width:150px">Time</th>
             <th style="width:190px">Agent</th>
-            <th style="width:170px">Aksi</th>
-            <th>Subjek</th>
+            <th style="width:170px">Action</th>
+            <th>Subject</th>
             <th style="width:120px">Status</th>
             <th style="width:170px">Person In Charge</th>
           </tr>
@@ -69,7 +69,7 @@
                   <span class="avatar avatar--sm {{ log.actor_label|avatar_color }}">
                     {{ log.actor_label|initials }}
                   </span>
-                  <span class="truncate">{{ log.actor_label|default:"Sistem" }}</span>
+                  <span class="truncate">{{ log.actor_label|default:"System" }}</span>
                 </span>
               </td>
               <td>
@@ -98,9 +98,9 @@
             <tr>
               <td colspan="6">
                 <div class="empty">
-                  <div class="empty__title">Tidak ada log yang cocok</div>
-                  <div class="empty__desc">Longgarkan filter di atas untuk melihat lebih banyak.</div>
-                  <a href="{% url 'core:activity_log' %}" class="btn btn--secondary">Reset filter</a>
+                  <div class="empty__title">No matching activity logs</div>
+                  <div class="empty__desc">Adjust filters above to see more records.</div>
+                  <a href="{% url 'core:activity_log' %}" class="btn btn--secondary">Reset filters</a>
                 </div>
               </td>
             </tr>

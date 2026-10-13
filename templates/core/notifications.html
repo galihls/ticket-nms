@@ -3,7 +3,7 @@
 
 {% block page_desc %}
   <p class="page-header__desc">
-    Notifikasi seluruh tiket dari semua agent.
+    Ticket notifications from all agents.
   </p>
 {% endblock %}
 
@@ -12,7 +12,7 @@
     <form method="post" action="{% url 'core:notifications_read' %}">
       {% csrf_token %}
       <input type="hidden" name="next" value="{{ request.get_full_path }}">
-      <button type="submit" class="btn btn--secondary">Tandai semua dibaca</button>
+      <button type="submit" class="btn btn--secondary">Mark all as read</button>
     </form>
   {% endif %}
 {% endblock %}
@@ -21,10 +21,10 @@
 
 <div class="tabs">
   <a href="{% url 'core:notifications' %}" class="tab {% if filter != 'unread' %}is-active{% endif %}">
-    Semua
+    All
   </a>
   <a href="?filter=unread" class="tab {% if filter == 'unread' %}is-active{% endif %}">
-    Belum dibaca
+    Unread
     {% if nav_unread_count %}<span class="badge badge--danger">{{ nav_unread_count }}</span>{% endif %}
   </a>
 </div>
@@ -43,7 +43,7 @@
           </span>
         </span>
         {% if not note.is_read %}
-          <span class="badge badge--info" style="align-self:center">Baru</span>
+          <span class="badge badge--info" style="align-self:center">New</span>
         {% endif %}
       </a>
     {% empty %}
@@ -53,15 +53,15 @@
           <path d="M12 3a5.5 5.5 0 0 0-5.5 5.5c0 5-2 6.5-2 6.5h15s-2-1.5-2-6.5A5.5 5.5 0 0 0 12 3Z"/>
           <path d="M13.8 18.5a2 2 0 0 1-3.6 0"/>
         </svg>
-        <div class="empty__title">Tidak ada notifikasi</div>
+        <div class="empty__title">No notifications</div>
         <div class="empty__desc">
           {% if filter == "unread" %}
-            Semua notifikasi sudah dibaca.
+            All notifications have been read.
           {% else %}
-            Notifikasi muncul saat ada tiket baru atau tiket yang ditutup.
+            Notifications will appear when tickets are created or closed.
           {% endif %}
         </div>
-        <a href="{% url 'tickets:list' %}" class="btn btn--secondary">Buka daftar tiket</a>
+        <a href="{% url 'tickets:list' %}" class="btn btn--secondary">Go to ticket list</a>
       </div>
     {% endfor %}
   </div>

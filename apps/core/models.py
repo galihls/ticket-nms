@@ -52,15 +52,15 @@ class ActivityLog(models.Model):
     """
 
     class Verb(models.TextChoices):
-        TICKET_CREATE = "ticket_create", "Membuat tiket"
-        TICKET_UPDATE = "ticket_update", "Memperbarui tiket"
-        TICKET_REPLY = "ticket_reply", "Membalas tiket"
-        TICKET_NOTE = "ticket_note", "Menambah catatan internal"
-        TICKET_CLOSE = "ticket_close", "Menutup tiket"
-        TICKET_REOPEN = "ticket_reopen", "Membuka ulang tiket"
-        ARTICLE_CREATE = "article_create", "Membuat artikel solusi"
-        REPORT_EXPORT = "report_export", "Mengunduh laporan"
-        LOGIN = "login", "Masuk ke sistem"
+        TICKET_CREATE = "ticket_create", "Created ticket"
+        TICKET_UPDATE = "ticket_update", "Updated ticket"
+        TICKET_REPLY = "ticket_reply", "Replied to ticket"
+        TICKET_NOTE = "ticket_note", "Added internal note"
+        TICKET_CLOSE = "ticket_close", "Closed ticket"
+        TICKET_REOPEN = "ticket_reopen", "Reopened ticket"
+        ARTICLE_CREATE = "article_create", "Created solution article"
+        REPORT_EXPORT = "report_export", "Exported report"
+        LOGIN = "login", "Signed in"
 
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL, verbose_name="pelaku",
@@ -107,7 +107,7 @@ class ActivityLog(models.Model):
         """Jalan pintas supaya view tidak perlu mengisi actor_label manual."""
         return cls.objects.create(
             actor=actor if actor and actor.is_authenticated else None,
-            actor_label=getattr(actor, "display_name", "") or "Sistem",
+            actor_label=getattr(actor, "display_name", "") or "System",
             verb=verb,
             **fields,
         )
@@ -117,10 +117,10 @@ class Notification(models.Model):
     """Notifikasi global — admin melihat aktivitas tiket dari seluruh agent."""
 
     class Level(models.TextChoices):
-        INFO = "info", "Informasi"
-        SUCCESS = "success", "Selesai"
-        WARNING = "warning", "Perhatian"
-        DANGER = "danger", "Mendesak"
+        INFO = "info", "Information"
+        SUCCESS = "success", "Success"
+        WARNING = "warning", "Warning"
+        DANGER = "danger", "Urgent"
 
     title = models.CharField("judul", max_length=160)
     body = models.CharField("isi", max_length=255, blank=True)

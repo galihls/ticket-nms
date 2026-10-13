@@ -23,7 +23,7 @@ def user(db):
 def test_halaman_login_tampil(client, db):
     resp = client.get(reverse("accounts:login"))
     assert resp.status_code == 200
-    assert "Masuk" in resp.content.decode()
+    assert "Sign In" in resp.content.decode()
 
 
 def test_dashboard_butuh_login(client, db):
@@ -50,14 +50,14 @@ def test_login_gagal_menampilkan_pesan(client, user):
         {"username": "noc01", "password": "salah"},
     )
     assert resp.status_code == 200
-    assert "Username atau password salah" in resp.content.decode()
+    assert "Invalid username or password" in resp.content.decode()
 
 
 def test_styleguide_tampil(client, user):
     client.force_login(user)
     resp = client.get(reverse("core:styleguide"))
     assert resp.status_code == 200
-    assert "Palet Warna" in resp.content.decode()
+    assert "Color Palette" in resp.content.decode()
 
 
 def test_healthz_ok(client, db):
@@ -70,7 +70,7 @@ def test_logout_mengembalikan_ke_login(client, user):
     client.force_login(user)
     resp = client.post(reverse("accounts:logout"), follow=True)
     assert resp.status_code == 200
-    assert "Masuk" in resp.content.decode()
+    assert "Sign In" in resp.content.decode()
 
 
 @pytest.mark.django_db

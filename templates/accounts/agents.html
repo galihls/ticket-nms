@@ -3,7 +3,7 @@
 
 {% block page_desc %}
   <p class="page-header__desc">
-    Beban kerja setiap agent — dipakai saat membagi tiket baru.
+    Workload per agent — used when dispatching new tickets.
   </p>
 {% endblock %}
 
@@ -48,15 +48,15 @@
       </div>
       <div class="card__footer">
         <a href="{% url 'tickets:list' %}?assignee={{ agent.id }}" class="btn btn--ghost btn--sm">
-          Lihat {{ agent.total }} tiket
+          View {{ agent.total }} tickets
         </a>
       </div>
     </div>
   {% empty %}
     <div class="card" style="grid-column:1/-1">
       <div class="empty">
-        <div class="empty__title">Belum ada agent aktif</div>
-        <div class="empty__desc">Tambahkan pengguna lewat panel administrasi.</div>
+        <div class="empty__title">No active agents yet</div>
+        <div class="empty__desc">Add users via the administration panel.</div>
       </div>
     </div>
   {% endfor %}
