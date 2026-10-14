@@ -185,7 +185,7 @@
                 <td>{{ ticket.new_site|default:"—" }}</td>
                 <td class="truncate" style="max-width:180px">{{ ticket.new_address|default:"—" }}</td>
               {% endif %}
-              <td>{{ ticket.get_company_display|default:"—" }}</td>
+              <td>{{ ticket.company|default:"—" }}</td>
               <td class="nowrap text-sm">{{ ticket.opened_at|date:"d/m/Y H:i" }}</td>
             </tr>
           {% empty %}

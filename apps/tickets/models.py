@@ -251,6 +251,9 @@ class Ticket(TimeStampedModel):
 
     # ── Turunan untuk tampilan ─────────────────────────────────────────────
 
+    def get_company_display(self):
+        return self.company or "—"
+
     @property
     def status_badge(self):
         return {

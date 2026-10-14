@@ -158,7 +158,7 @@ def _sheet_detail(wb, ctx):
                 agent_name,
                 opened.strftime("%d/%m/%Y %H:%M"),
                 closed.strftime("%d/%m/%Y %H:%M") if closed else "—",
-                ticket.get_company_display() if ticket.company else "—",
+                ticket.company or "—",
             ]
         else:
             values = [
@@ -172,7 +172,7 @@ def _sheet_detail(wb, ctx):
                 agent_name,
                 opened.strftime("%d/%m/%Y %H:%M"),
                 closed.strftime("%d/%m/%Y %H:%M") if closed else "—",
-                ticket.get_company_display() if ticket.company else "—",
+                ticket.company or "—",
             ]
 
         for col, value in enumerate(values, start=1):
