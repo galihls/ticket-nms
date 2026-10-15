@@ -145,10 +145,14 @@ def ticket_detail(request, number):
         "can_edit": ticket.can_edit(request.user),
         "replies": ticket.replies.select_related("author"),
         "reply_form": ReplyForm(),
-        "close_form": CloseTicketForm(),
+        "close_form": CloseTicketForm(initial={
+            "problem_category": ticket.problem_category,
+            "problem_detail": ticket.problem_detail,
+        }),
         "statuses": Ticket.Status.choices,
         "priorities": Ticket.Priority.choices,
         "types": Ticket.Type.choices,
+        "problem_categories": Ticket.ProblemCategory.choices,
         "groups": GROUPS,
         "agents": User.objects.filter(is_active=True),
         "history": ActivityLog.objects.filter(target_label=ticket.number)[:20],
@@ -318,6 +322,18 @@ def ticket_update_properties(request, number):
         changes.append(f"Group: {ticket.group or '—'} → {group or '—'}")
         ticket.group = group
 
+    if ticket.ticket_type == Ticket.Type.PROBLEM:
+        prob_cat = request.POST.get("problem_category")
+        if prob_cat is not None and prob_cat != ticket.problem_category:
+            old_c = ticket.get_problem_category_display() or "None"
+            ticket.problem_category = prob_cat
+            new_c = ticket.get_problem_category_display() or "None"
+            changes.append(f"Category: {old_c} → {new_c}")
+        prob_det = request.POST.get("problem_detail")
+        if prob_det is not None and prob_det.strip() != ticket.problem_detail:
+            ticket.problem_detail = prob_det.strip()
+            changes.append(f"Detail: {ticket.problem_detail}")
+
     if ticket.status == Ticket.Status.CLOSED and not ticket.closed_at:
         ticket.closed_at = timezone.now()
     elif ticket.status != Ticket.Status.CLOSED:
@@ -384,6 +400,13 @@ def ticket_close(request, number):
         category_label = category
         ticket.close_reason = f"{category} — {reason}"
 
+        if ticket.ticket_type == Ticket.Type.PROBLEM:
+            prob_cat = form.cleaned_data.get("problem_category")
+            if prob_cat:
+                ticket.problem_category = prob_cat
+                prob_det = form.cleaned_data.get("problem_detail", "").strip()
+                ticket.problem_detail = prob_det
+
     ticket.status = Ticket.Status.CLOSED
     ticket.closed_at = timezone.now()
     ticket.save()
@@ -421,11 +444,37 @@ def ticket_reopen(request, number):
         target_label=ticket.number, subject=ticket.subject,
         status=ticket.get_status_display(),
         pic=ticket.requester_phone if ticket.requester_phone else "No PIC number",
-        reason=request.POST.get("reason", "Reopened by agent"),
-        url=ticket.get_absolute_url(),
+        reason="Ticket reopened by user", url=ticket.get_absolute_url(),
     )
-    messages.success(request, f"Ticket {ticket.number} reopened.")
+    Notification.objects.create(
+        title=f"Ticket {ticket.number} reopened",
+        body=f"{ticket.subject} · Outstanding",
+        url=ticket.get_absolute_url(), actor=request.user,
+        level=Notification.Level.WARNING,
+    )
+    messages.warning(request, f"Ticket {ticket.number} reopened as Outstanding.")
     return redirect(ticket)
+
+
+@login_required
+@require_POST
+def ticket_delete(request, number):
+    ticket = get_object_or_404(Ticket, number=number)
+    if not (request.user.is_superuser or request.user.is_staff):
+        messages.error(request, "Only administrators have permission to delete tickets.")
+        return redirect(ticket)
+
+    ticket_number = ticket.number
+    ticket_subject = ticket.subject
+    ActivityLog.record(
+        request.user, ActivityLog.Verb.TICKET_DELETE,
+        target_label=ticket_number, subject=ticket_subject,
+        status="Deleted", pic=request.user.display_name,
+        reason=f"Permanently deleted by {request.user.display_name}",
+    )
+    ticket.delete()
+    messages.success(request, f"Ticket {ticket_number} has been permanently deleted.")
+    return redirect("tickets:list")
 
 
 @login_required

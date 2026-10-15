@@ -58,6 +58,7 @@ class ActivityLog(models.Model):
         TICKET_NOTE = "ticket_note", "Added internal note"
         TICKET_CLOSE = "ticket_close", "Closed ticket"
         TICKET_REOPEN = "ticket_reopen", "Reopened ticket"
+        TICKET_DELETE = "ticket_delete", "Deleted ticket"
         ARTICLE_CREATE = "article_create", "Created solution article"
         REPORT_EXPORT = "report_export", "Exported report"
         LOGIN = "login", "Signed in"

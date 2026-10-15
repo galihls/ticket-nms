@@ -18,4 +18,5 @@ urlpatterns = [
     path("<str:number>/properti/", views.ticket_update_properties, name="properties"),
     path("<str:number>/tutup/", views.ticket_close, name="close"),
     path("<str:number>/buka-ulang/", views.ticket_reopen, name="reopen"),
+    path("<str:number>/hapus/", views.ticket_delete, name="delete"),
 ]

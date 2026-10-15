@@ -105,8 +105,6 @@ class TicketForm(forms.ModelForm):
         priority = data.get("priority")
 
         if ticket_type == Ticket.Type.PROBLEM:
-            if not problem_category:
-                self.add_error("problem_category", "Problem category is required for Problem tickets.")
             if problem_category == Ticket.ProblemCategory.OTHER and not problem_detail:
                 self.add_error("problem_detail", "Category detail is required when selecting Other.")
         elif ticket_type == Ticket.Type.FEATURE:
@@ -154,6 +152,19 @@ class CloseTicketForm(forms.Form):
     reason_category = forms.ChoiceField(
         label="Resolution category", choices=REASONS, required=False,
         widget=forms.Select(attrs={"class": "form-select"}),
+    )
+
+    # Problem tickets (PR): update problem category upon closing
+    problem_category = forms.ChoiceField(
+        label="Problem Category",
+        choices=[("", "Keep current / Not specified")] + list(Ticket.ProblemCategory.choices),
+        required=False,
+        widget=forms.Select(attrs={"class": "form-select", "id": "id_close_problem_category"}),
+    )
+    problem_detail = forms.CharField(
+        label="Category Detail",
+        required=False,
+        widget=forms.TextInput(attrs={"class": "form-input", "id": "id_close_problem_detail", "placeholder": "Detail if Other..."}),
     )
 
     # Relocation tickets (RC)

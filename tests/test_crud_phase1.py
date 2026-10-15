@@ -685,3 +685,97 @@ class TestCompanyCRUD:
         assert resp.status_code == 302
         # Company should still exist
         assert Company.objects.filter(pk=c.pk).exists()
+
+
+class TestTicketDelete:
+    def test_admin_can_delete_ticket(self, auth_client, admin_user):
+        t = Ticket.objects.create(
+            ticket_type="PR",
+            subject="To be deleted",
+            description="Delete test",
+            company="INITECH",
+            requester_name="Admin",
+            requester_phone="08123456",
+            source="nms",
+            priority="medium",
+            status="open",
+            opened_at=timezone.now(),
+            created_by=admin_user,
+        )
+        resp = auth_client.post(reverse("tickets:delete", args=[t.number]))
+        assert resp.status_code == 302
+        assert not Ticket.objects.filter(pk=t.pk).exists()
+        assert ActivityLog.objects.filter(target_label=t.number, verb="ticket_delete").exists()
+
+    def test_agent_cannot_delete_ticket(self, agent_client, agent_user):
+        t = Ticket.objects.create(
+            ticket_type="PR",
+            subject="Agent cannot delete",
+            description="Delete test",
+            company="INITECH",
+            requester_name="Agent",
+            requester_phone="08123456",
+            source="nms",
+            priority="medium",
+            status="open",
+            opened_at=timezone.now(),
+            created_by=agent_user,
+        )
+        resp = agent_client.post(reverse("tickets:delete", args=[t.number]))
+        assert resp.status_code == 302
+        # Ticket must still exist
+        assert Ticket.objects.filter(pk=t.pk).exists()
+
+
+class TestProblemCategoryOptional:
+    def test_create_problem_ticket_without_category(self, auth_client):
+        resp = auth_client.post(reverse("tickets:create"), {
+            "ticket_type": "PR",
+            "subject": "Unknown Problem Incident",
+            "description": "Don't know the problem category yet",
+            "company": "INITECH",
+            "requester_phone": "0812345678",
+            "priority": "medium",
+            "status": "open",
+            "source": "nms",
+            "problem_category": "",
+            "problem_detail": "",
+        })
+        assert resp.status_code == 302
+        t = Ticket.objects.get(subject="Unknown Problem Incident")
+        assert t.problem_category == ""
+
+    def test_close_ticket_updates_category(self, auth_client, admin_user):
+        t = Ticket.objects.create(
+            ticket_type="PR",
+            problem_category="",
+            subject="Ticket to close with category",
+            description="Desc",
+            company="INITECH",
+            requester_name="Admin",
+            requester_phone="08123456",
+            source="nms",
+            priority="medium",
+            status="open",
+            opened_at=timezone.now(),
+            created_by=admin_user,
+        )
+        resp = auth_client.post(reverse("tickets:close", args=[t.number]), {
+            "reason_category": "Resolved",
+            "reason": "Root cause identified as fiber cut",
+            "problem_category": "los",
+            "problem_detail": "Fiber cut at km 15",
+        })
+        assert resp.status_code == 302
+        t.refresh_from_db()
+        assert t.status == Ticket.Status.CLOSED
+        assert t.problem_category == "los"
+        assert t.problem_detail == "Fiber cut at km 15"
+
+
+class TestExportDateFilter:
+    def test_export_page_with_date_range(self, auth_client):
+        resp = auth_client.get(reverse("reports:export") + "?from=2026-10-01&to=2026-10-15")
+        assert resp.status_code == 200
+        assert "01/10/2026" in resp.context["range_label"]
+        assert "15/10/2026" in resp.context["range_label"]

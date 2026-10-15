@@ -67,12 +67,29 @@ def _report_context(request):
     Dipakai keduanya supaya angka yang dilihat di layar dijamin sama dengan
     angka yang keluar di file — bukan dua perhitungan terpisah.
     """
-    period = request.GET.get("period", "daily")
-    if period not in dict(ReportExport.Period.choices):
-        period = "daily"
+    today = timezone.localdate()
+    from_str = request.GET.get("from", "").strip()
+    to_str = request.GET.get("to", "").strip()
 
-    default_preset = "this_month" if period == "monthly" else "today"
-    date_range = periods.resolve(request, default=default_preset)
+    custom_from = periods._parse(from_str) if from_str else None
+    custom_to = periods._parse(to_str) if to_str else None
+
+    if custom_from and custom_to:
+        start_d, end_d = (custom_from, custom_to) if custom_from <= custom_to else (custom_to, custom_from)
+    elif custom_from:
+        start_d, end_d = custom_from, custom_from
+    elif custom_to:
+        start_d, end_d = custom_to, custom_to
+    else:
+        # Default: awal bulan berjalan sampai hari ini
+        start_d = today.replace(day=1)
+        end_d = today
+
+    date_range = periods.DateRange("custom", start_d, end_d)
+    range_label = (start_d.strftime("%d/%m/%Y") if start_d == end_d
+                   else f"{start_d.strftime('%d/%m/%Y')} – {end_d.strftime('%d/%m/%Y')}")
+
+    period = "daily" if start_d == end_d else "monthly"
 
     scope = (Ticket.objects.in_range(date_range.start, date_range.end)
              .select_related("assignee"))
@@ -90,9 +107,9 @@ def _report_context(request):
 
     return {
         "period": period,
-        "period_label": dict(ReportExport.Period.choices)[period],
+        "period_label": range_label,
         "range": date_range,
-        "range_label": date_range.label,
+        "range_label": range_label,
         "company": company,
         "counts": counts,
         "type_counts": {

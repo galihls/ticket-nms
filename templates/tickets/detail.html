@@ -71,6 +71,17 @@
           Locked — only administrators can edit
         </span>
       {% endif %}
+
+      {% if is_admin %}
+        <button type="button" class="btn btn--danger" data-modal-open="delete-modal"
+                style="background-color: #ef4444; color: #fff; border-color: #ef4444;">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 6h12M8 6V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2M5 6v10a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6"/>
+          </svg>
+          Delete
+        </button>
+      {% endif %}
     </div>
   </div>
 {% endblock %}
@@ -256,6 +267,23 @@
               Ticket number does not change after creation.
             </div>
           </div>
+
+          {% if ticket.ticket_type == "PR" %}
+            <div class="props__field">
+              <label class="props__label" for="p-problem-category">Problem Category</label>
+              <select name="problem_category" id="p-problem-category" class="form-select" {% if not can_edit %}disabled{% endif %}>
+                <option value="" {% if not ticket.problem_category %}selected{% endif %}>— Not specified —</option>
+                {% for value, label in problem_categories %}
+                  <option value="{{ value }}" {% if ticket.problem_category == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="props__field" id="p-problem-detail-field" {% if ticket.problem_category != "other" %}style="display:none"{% endif %}>
+              <label class="props__label" for="p-problem-detail">Category Detail</label>
+              <input type="text" name="problem_detail" id="p-problem-detail" class="form-input"
+                     value="{{ ticket.problem_detail }}" placeholder="Specify other detail..." {% if not can_edit %}disabled{% endif %}>
+            </div>
+          {% endif %}
 
           {% if can_edit %}
             <button type="submit" class="btn btn--primary btn--block">Save Changes</button>
@@ -447,6 +475,23 @@
             {{ close_form.reason }}
           </div>
         {% else %}
+          {% if ticket.ticket_type == "PR" %}
+            <div class="form-row">
+              <label class="form-label" for="id_close_problem_category">
+                Problem Category
+              </label>
+              {{ close_form.problem_category }}
+              <div class="form-help">Classify root cause category upon closing.</div>
+            </div>
+
+            <div class="form-row" id="close-problem-detail-row" {% if ticket.problem_category != "other" %}style="display:none"{% endif %}>
+              <label class="form-label" for="id_close_problem_detail">
+                Category Detail
+              </label>
+              {{ close_form.problem_detail }}
+            </div>
+          {% endif %}
+
           <div class="form-row">
             <label class="form-label" for="{{ close_form.reason_category.id_for_label }}">
               {{ close_form.reason_category.label }}<span class="req">*</span>
@@ -472,6 +517,41 @@
   </div>
 </div>
 
+{# ── Modal hapus tiket (Admin only) ─────────────────────────────────── #}
+{% if is_admin %}
+<div class="modal" id="delete-modal" hidden>
+  <div class="modal__box" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+    <form method="post" action="{% url 'tickets:delete' ticket.number %}">
+      {% csrf_token %}
+
+      <div class="modal__head">
+        <h2 id="delete-modal-title" style="color: #ef4444;">Delete Ticket {{ ticket.number }}</h2>
+        <button type="button" class="modal__close" data-modal-close aria-label="Close">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" aria-hidden="true"><path d="m5.5 5.5 9 9M14.5 5.5l-9 9"/></svg>
+        </button>
+      </div>
+
+      <div class="modal__body">
+        <p style="margin-bottom: 12px; font-size: 15px;">
+          Are you sure you want to permanently delete ticket <strong>{{ ticket.number }}</strong> (<em>{{ ticket.subject }}</em>)?
+        </p>
+        <p class="text-sm" style="color: #ef4444; font-weight: 500; background: #fef2f2; padding: 10px; border-radius: 6px; border: 1px solid #fee2e2;">
+          ⚠️ This action is irreversible. All conversation replies, notes, and activity history for this ticket will be permanently removed.
+        </p>
+      </div>
+
+      <div class="modal__foot">
+        <button type="button" class="btn btn--secondary" data-modal-close>Cancel</button>
+        <button type="submit" class="btn btn--danger" style="background-color: #ef4444; color: #fff; border-color: #ef4444;">
+          Yes, Delete Permanently
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
 <script>
 document.addEventListener("DOMContentLoaded", function() {
   const relActionSelect = document.getElementById("id_relocation_action");
@@ -487,6 +567,24 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     relActionSelect.addEventListener("change", toggleNewSiteFields);
     toggleNewSiteFields();
+  }
+
+  // Quick properties category detail toggle
+  const propProbCat = document.getElementById("p-problem-category");
+  const propProbDetailField = document.getElementById("p-problem-detail-field");
+  if (propProbCat && propProbDetailField) {
+    propProbCat.addEventListener("change", function() {
+      propProbDetailField.style.display = (this.value === "other") ? "block" : "none";
+    });
+  }
+
+  // Close modal category detail toggle
+  const closeProbCat = document.getElementById("id_close_problem_category");
+  const closeProbDetailRow = document.getElementById("close-problem-detail-row");
+  if (closeProbCat && closeProbDetailRow) {
+    closeProbCat.addEventListener("change", function() {
+      closeProbDetailRow.style.display = (this.value === "other") ? "block" : "none";
+    });
   }
 
   const typeSelect = document.getElementById("p-type");

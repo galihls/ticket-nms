@@ -110,7 +110,7 @@
           <div id="problem-fields" class="form-grid" style="margin-bottom: 16px;">
             <div class="form-row {% if form.problem_category.errors %}has-error{% endif %}">
               <label class="form-label" for="{{ form.problem_category.id_for_label }}">
-                Problem Category<span class="req">*</span>
+                Problem Category <span class="text-sm muted" style="font-weight: normal; font-size: 12px;">(Optional — can be set later)</span>
               </label>
               {{ form.problem_category }}
               {% for error in form.problem_category.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
