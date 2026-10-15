@@ -33,6 +33,13 @@ class CompanyForm(forms.ModelForm):
 class TicketForm(forms.ModelForm):
     """Form to create and edit tickets."""
 
+    company = forms.ChoiceField(
+        label="Company / Unit",
+        choices=[],
+        widget=forms.Select(attrs={"class": "form-select"}),
+        required=True,
+    )
+
     class Meta:
         model = Ticket
         fields = [
@@ -52,7 +59,6 @@ class TicketForm(forms.ModelForm):
                 "rows": 3,
                 "placeholder": "Incident location address / origin relocation address…",
             }),
-            "company": forms.Select(),
             "requester_phone": forms.TextInput(attrs={"placeholder": "08xxxxxxxxx"}),
             "tags": forms.TextInput(attrs={"placeholder": "link-down, fiber, urgent"}),
         }
@@ -76,6 +82,7 @@ class TicketForm(forms.ModelForm):
                 company_choices.append((val, val))
 
         self.fields["company"].choices = company_choices
+        self.fields["company"].widget.choices = company_choices
 
         for name, field in self.fields.items():
             widget = field.widget

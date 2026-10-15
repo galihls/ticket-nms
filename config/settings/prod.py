@@ -52,3 +52,10 @@ LOGGING["handlers"]["file"] = {  # noqa: F405
 }
 LOGGING["root"]["handlers"] = ["console", "file"]  # noqa: F405
 LOGGING["loggers"]["apps"]["handlers"] = ["console", "file"]  # noqa: F405
+
+# ── Single Sign-On Office 365 ─────────────────────────────────────────────
+# Di produksi, matikan bypass demo akun agar tidak otomatis login sebagai admin.
+# Tombol disembunyikan sampai integrasi Azure AD sesungguhnya dikonfigurasi.
+SSO["DEMO_MODE"] = env.bool("SSO_DEMO_MODE", default=False)  # noqa: F405
+SSO["ENABLED"] = env.bool("SSO_ENABLED", default=False)  # noqa: F405
+
