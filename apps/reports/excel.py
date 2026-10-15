@@ -51,9 +51,18 @@ def _header_row(ws, row, headers, widths=None):
     ws.freeze_panes = ws.cell(row=row + 1, column=1)
 
 
+def _format_date_range(ctx):
+    start = ctx["range"].start_date
+    end = ctx["range"].end_date
+    if start == end:
+        return f"Tanggal: {start.strftime('%d/%m/%Y')}"
+    return f"Periode: {start.strftime('%d/%m/%Y')} – {end.strftime('%d/%m/%Y')}"
+
+
 def _sheet_rekap(wb, ctx):
     ws = wb.create_sheet("Summary")
-    _title_block(ws, f"Summary — {ctx['period_label']}", ctx["range_label"], 4)
+    date_display = _format_date_range(ctx)
+    _title_block(ws, f"Summary — {date_display}", date_display, 4)
 
     _header_row(ws, 4, ["Status", "Ticket Count", "Percentage", "Notes"],
                 [22, 16, 14, 44])
@@ -134,7 +143,8 @@ def _sheet_detail(wb, ctx):
         wrap_cols = (2, 7)
         center_cols = (3, 4, 5, 9, 10)
 
-    _title_block(ws, "Ticket Details", ctx["range_label"], len(headers))
+    date_display = _format_date_range(ctx)
+    _title_block(ws, f"Ticket Details — {date_display}", date_display, len(headers))
     _header_row(ws, 4, headers, col_widths)
 
     for i, ticket in enumerate(ctx["tickets"], start=5):
@@ -191,7 +201,8 @@ def _sheet_detail(wb, ctx):
 
 def _sheet_agents(wb, ctx):
     ws = wb.create_sheet("Agent Performance")
-    _title_block(ws, "Agent Performance", ctx["range_label"], 6)
+    date_display = _format_date_range(ctx)
+    _title_block(ws, f"Agent Performance — {date_display}", date_display, 6)
 
     _header_row(ws, 4, ["Agent", "Position", "Open", "Outstanding", "Close",
                         "Completion Rate"], [26, 22, 12, 16, 12, 16])
@@ -224,7 +235,8 @@ def build_workbook(ctx, report_type="detail"):
     else:
         _sheet_detail(wb, ctx)
 
-    wb.properties.title = f"{ctx['period_label']} Report — Ticketing NMS"
+    date_display = _format_date_range(ctx)
+    wb.properties.title = f"Report {date_display} — Ticketing NMS"
     wb.properties.creator = ctx.get("author", "Ticketing NMS")
     return wb
 
@@ -232,13 +244,13 @@ def build_workbook(ctx, report_type="detail"):
 def file_name(period, date_range, report_type="detail"):
     prefix = {
         "detail": "Ticket_Details",
-        "rekap": "Daily_Summary",
+        "rekap": "Summary_Report",
         "agent": "Agent_Performance"
     }.get(report_type, "Report")
 
-    if period == "monthly":
-        return f"{prefix}_Monthly_{date_range.start_date.strftime('%Y-%m')}.xlsx"
+    d_start = date_range.start_date.strftime("%d-%m-%Y")
+    d_end = date_range.end_date.strftime("%d-%m-%Y")
+
     if date_range.start_date == date_range.end_date:
-        return f"{prefix}_{date_range.start_date.strftime('%Y-%m-%d')}.xlsx"
-    return (f"{prefix}_{date_range.start_date.strftime('%Y-%m-%d')}_"
-            f"{date_range.end_date.strftime('%Y-%m-%d')}.xlsx")
+        return f"{prefix}_{d_start}.xlsx"
+    return f"{prefix}_{d_start}_sd_{d_end}.xlsx"
