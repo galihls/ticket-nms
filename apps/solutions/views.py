@@ -112,6 +112,14 @@ def article_detail(request, slug):
     article = get_object_or_404(
         Article.objects.select_related("author"), slug=slug)
 
+    # Protect draft articles: only author or staff can view drafts
+    if article.status != Article.Status.PUBLISHED:
+        if article.author != request.user and not (request.user.is_staff or request.user.is_superuser):
+            from django.http import Http404
+            raise Http404("Article not found.")
+
+    can_edit = (article.author == request.user) or request.user.is_staff or request.user.is_superuser
+
     seen = request.session.setdefault("articles_seen", [])
     if article.pk not in seen:
         Article.objects.filter(pk=article.pk).update(views=article.views + 1)
@@ -128,6 +136,7 @@ def article_detail(request, slug):
                        (article.category_label, reverse("solutions:browse") + f"?kategori={article.category}"),
                        (article.title, None)],
         "article": article,
+        "can_edit": can_edit,
         "related": related,
         "voted": article.pk in request.session.get("articles_voted", []),
     })
@@ -186,10 +195,22 @@ def article_create(request):
 @login_required
 def article_edit(request, slug):
     article = get_object_or_404(Article, slug=slug)
+
+    # Broken Object Level Authorization (IDOR) check
+    if article.author != request.user and not (request.user.is_staff or request.user.is_superuser):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("You do not have permission to edit this article.")
+
     form = ArticleForm(request.POST or None, instance=article)
 
     if request.method == "POST" and form.is_valid():
         form.save()
+        ActivityLog.record(
+            request.user, ActivityLog.Verb.ARTICLE_CREATE,
+            target_label=article.category_label,
+            subject=f"Updated: {article.title}", status=article.get_status_display(),
+            pic=request.user.display_name, url=article.get_absolute_url(),
+        )
         messages.success(request, "Article updated.")
         return redirect(article)
 

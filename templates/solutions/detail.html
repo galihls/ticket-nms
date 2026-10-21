@@ -96,14 +96,16 @@
   <aside class="stack">
     <div class="card">
       <div class="card__body">
-        <a href="{% url 'solutions:edit' article.slug %}" class="btn btn--secondary btn--block">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
-               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M4 16.3 14.6 5.7a2 2 0 0 0-2.8-2.8L1.2 13.5v2.8H4Z" transform="translate(2 0)"/>
-          </svg>
-          Edit article
-        </a>
-        <a href="{% url 'solutions:create' %}" class="btn btn--ghost btn--block mt-1">
+        {% if can_edit %}
+          <a href="{% url 'solutions:edit' article.slug %}" class="btn btn--secondary btn--block">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 16.3 14.6 5.7a2 2 0 0 0-2.8-2.8L1.2 13.5v2.8H4Z" transform="translate(2 0)"/>
+            </svg>
+            Edit article
+          </a>
+        {% endif %}
+        <a href="{% url 'solutions:create' %}" class="btn btn--ghost btn--block {% if can_edit %}mt-1{% endif %}">
           Write new article
         </a>
       </div>

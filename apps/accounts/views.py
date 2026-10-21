@@ -13,6 +13,7 @@ from apps.tickets.models import Ticket
 
 from .forms import LoginForm, ProfileForm
 from .models import User
+from .rate_limit import clear_failed_logins, is_locked_out, record_failed_login
 
 
 class LoginView(auth_views.LoginView):
@@ -20,15 +21,32 @@ class LoginView(auth_views.LoginView):
     authentication_form = LoginForm
     redirect_authenticated_user = True
 
+    def dispatch(self, request, *args, **kwargs):
+        if request.method == "POST":
+            username = request.POST.get("username", "").strip()
+            locked, error_msg = is_locked_out(request, username)
+            if locked:
+                messages.error(request, error_msg)
+                form = self.get_form()
+                return self.render_to_response(self.get_context_data(form=form))
+        return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["sso"] = settings.SSO
         return context
 
     def form_valid(self, form):
+        username = form.cleaned_data.get("username")
+        clear_failed_logins(self.request, username)
         response = super().form_valid(form)
         _record_login(self.request, method="Local account")
         return response
+
+    def form_invalid(self, form):
+        username = self.request.POST.get("username", "").strip()
+        record_failed_login(self.request, username)
+        return super().form_invalid(form)
 
 
 class LogoutView(auth_views.LogoutView):
@@ -40,19 +58,17 @@ def sso_login(request):
     if request.user.is_authenticated:
         return redirect("core:dashboard")
 
-    if not settings.SSO["DEMO_MODE"]:
+    # Strictly block SSO bypass if not explicitly enabled, not in demo mode, or in production
+    if not settings.SSO.get("ENABLED", False) or not settings.SSO.get("DEMO_MODE", False) or not settings.DEBUG:
         messages.warning(
             request,
             "Office 365 SSO is not configured yet. Please contact the system administrator.",
         )
         return redirect("accounts:login")
 
-    user = (User.objects.filter(username=settings.SSO["DEMO_USERNAME"]).first()
-            or User.objects.filter(is_superuser=True).first()
-            or User.objects.filter(is_active=True).first())
-
+    user = User.objects.filter(username=settings.SSO.get("DEMO_USERNAME")).first()
     if user is None:
-        messages.error(request, "No user accounts found. Run demo seed data.")
+        messages.error(request, "SSO demo user account not found.")
         return redirect("accounts:login")
 
     auth_login(request, user, backend="django.contrib.auth.backends.ModelBackend")

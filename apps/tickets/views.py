@@ -20,7 +20,6 @@ SORTS = [
     ("opened_at", "Oldest created"),
     ("-updated_at", "Recently updated"),
     ("priority", "Level"),
-    ("due_at", "Nearest due date"),
     ("number", "Ticket number"),
 ]
 
@@ -84,9 +83,6 @@ def ticket_list(request):
         # Urutan prioritas mengikuti tingkat kegentingan, bukan abjad
         order = {"high": 1, "medium": 2, "low": 3}
         qs = sorted(qs, key=lambda t: (order.get(t.priority, 9), -t.id))
-    elif sort == "due_at":
-        # Tiket tanpa jatuh tempo ditaruh di belakang, bukan di depan
-        qs = qs.order_by(models.F("due_at").asc(nulls_last=True))
     else:
         qs = qs.order_by(sort)
 

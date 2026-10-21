@@ -361,16 +361,8 @@ class Command(BaseCommand):
             users.append(user)
         return users
 
-    def _seed_folders(self): return {}
-        folders = {}
-        for category, name, description, order in FOLDERS:
-            folder, _ = Folder.objects.get_or_create(
-                name=name,
-                defaults={"category": category, "description": description,
-                          "order": order},
-            )
-            folders[name] = folder
-        return folders
+    def _seed_folders(self):
+        return {}
 
     def _seed_articles(self, users):
         now = timezone.now()
@@ -552,7 +544,7 @@ class Command(BaseCommand):
                 title = f"Tiket baru {ticket.number}"
                 body = f"{ticket.subject[:70]} · {ticket.get_priority_display()}"
                 level = (Notification.Level.DANGER
-                         if ticket.priority == Ticket.Priority.URGENT
+                         if ticket.priority == Ticket.Priority.HIGH
                          else Notification.Level.INFO)
                 when = ticket.opened_at
 

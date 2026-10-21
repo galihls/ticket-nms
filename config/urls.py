@@ -5,13 +5,15 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+admin_path = getattr(settings, "ADMIN_URL", "django-admin/").strip("/")
+
 urlpatterns = [
     path("", include(("apps.core.urls", "core"), namespace="core")),
     path("akun/", include(("apps.accounts.urls", "accounts"), namespace="accounts")),
     path("tiket/", include(("apps.tickets.urls", "tickets"), namespace="tickets")),
     path("solusi/", include(("apps.solutions.urls", "solutions"), namespace="solutions")),
     path("laporan/", include(("apps.reports.urls", "reports"), namespace="reports")),
-    path("django-admin/", admin.site.urls),
+    path(f"{admin_path}/", admin.site.urls),
 ]
 
 if settings.DEBUG:

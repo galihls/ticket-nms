@@ -166,6 +166,9 @@ COMPANY_NAME = "PT Ideologi Nusa Integrasi"
 COMPANY_SHORT = "INITECH"
 APP_VERSION = "0.2.0"
 
+# Slug path Django Admin (dapat diubah lewat env var untuk keamanan pentest)
+ADMIN_URL = env("DJANGO_ADMIN_URL", default="django-admin/")
+
 
 # ── Single Sign-On Office 365 ─────────────────────────────────────────────
 # Integrasi SAML 2.0 / OIDC sesungguhnya menyusul setelah tenant & app
@@ -173,11 +176,11 @@ APP_VERSION = "0.2.0"
 # memakai jalur bypass lokal supaya alur login tetap bisa diperagakan.
 
 SSO = {
-    "ENABLED": True,
+    "ENABLED": env.bool("SSO_ENABLED", default=False),
     "PROVIDER": "Microsoft 365",
     "PROTOCOL": env("SSO_PROTOCOL", default="OIDC"),
     "TENANT_DOMAIN": env("SSO_TENANT_DOMAIN", default="initech.co.id"),
-    "DEMO_MODE": env.bool("SSO_DEMO_MODE", default=True),
+    "DEMO_MODE": env.bool("SSO_DEMO_MODE", default=False),
     "DEMO_USERNAME": env("SSO_DEMO_USERNAME", default="rizky.pratama"),
 }
 

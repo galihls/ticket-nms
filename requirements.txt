@@ -4,7 +4,7 @@ django-environ==0.12.0
 
 # ── Database ──────────────────────────────────────────────────────────────
 # Dev default = SQLite (tanpa dependensi). Postgres dipakai lewat DATABASE_URL.
-psycopg[binary]==3.2.9
+psycopg[binary]
 
 # ── Integrasi Zabbix ──────────────────────────────────────────────────────
 requests==2.32.4
