@@ -183,6 +183,12 @@ def process_all_escalations(now=None, dry_run=False):
 
     Mengembalikan dict rekap hasil eksekusi.
     """
+    # Sinkronisasi status tiket yang sudah melewati 60 menit menjadi Outstanding
+    try:
+        Ticket.objects.auto_escalate()
+    except Exception as exc:
+        logger.warning("auto_escalate failed before processing escalations: %s", exc)
+
     now = now or timezone.now()
     one_day_ago = now - timedelta(days=1)
     five_days_ago = now - timedelta(days=5)

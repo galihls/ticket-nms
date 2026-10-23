@@ -80,6 +80,12 @@ class Command(BaseCommand):
         dry_run = options["dry_run"]
         now = timezone.now()
 
+        # Sinkronisasi status tiket yang sudah > 60 menit menjadi Outstanding
+        try:
+            Ticket.objects.auto_escalate()
+        except Exception:
+            pass
+
         conn = None
         if options["smtp"]:
             host = getattr(settings, "EMAIL_HOST", "smtp.office365.com") or "smtp.office365.com"
