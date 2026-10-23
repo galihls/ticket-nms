@@ -203,6 +203,10 @@ class Ticket(TimeStampedModel):
     closed_at = models.DateTimeField("waktu close", null=True, blank=True)
     close_reason = models.TextField("alasan close", blank=True)
 
+    escalated_to_lead_at = models.DateTimeField("eskalasi lead nsm pada", null=True, blank=True, db_index=True)
+    escalated_to_pm_at = models.DateTimeField("eskalasi pm & engineer pada", null=True, blank=True, db_index=True)
+    escalated_to_director_at = models.DateTimeField("eskalasi direktur pada", null=True, blank=True, db_index=True)
+
     tags = models.CharField("tag", max_length=180, blank=True,
                             help_text="Pisahkan dengan koma.")
 

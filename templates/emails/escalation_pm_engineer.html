@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pemberitahuan Eskalasi PM & Engineer (5 Hari)</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F4F6F8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1F2937;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#F4F6F8;padding:28px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:580px;background-color:#FFFFFF;border-radius:8px;border:1px solid #E5E7EB;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#16294F;padding:24px 28px;border-bottom:3px solid #D97706;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td>
+                    <h1 style="margin:0;font-size:18px;font-weight:700;color:#FFFFFF;letter-spacing:0.02em;">
+                      {{ company_short }} — Ticketing NMS
+                    </h1>
+                    <p style="margin:4px 0 0 0;font-size:13px;color:#FDE68A;">
+                      Pemberitahuan Eskalasi PM & Engineer (Fase 2)
+                    </p>
+                  </td>
+                  <td align="right" valign="middle">
+                    <span style="display:inline-block;padding:4px 10px;font-size:11px;font-weight:700;color:#FFFFFF;background-color:#D97706;border-radius:12px;text-transform:uppercase;letter-spacing:0.05em;">
+                      &ge; 5 Hari
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Alert Banner -->
+          <tr>
+            <td style="padding:24px 28px 12px 28px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#FFFBEB;border-left:4px solid #D97706;border-radius:4px;">
+                <tr>
+                  <td style="padding:14px 18px;">
+                    <strong style="color:#B45309;font-size:14px;display:block;margin-bottom:4px;">
+                      Tiket Belum Terselesaikan Lebih dari 5 Hari
+                    </strong>
+                    <span style="font-size:13px;color:#92400E;line-height:1.5;">
+                      Tiket di bawah ini telah terbuka selama <strong>{{ duration_display }}</strong> dan belum mencapai resolusi. Mohon perhatian Project Manager dan Engineer untuk percepatan penanganan teknis.
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Ticket Info -->
+          <tr>
+            <td style="padding:12px 28px 24px 28px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #E5E7EB;border-radius:6px;background-color:#FAFAFA;">
+                <tr>
+                  <td style="padding:16px 20px;border-bottom:1px solid #E5E7EB;">
+                    <span style="font-size:12px;color:#6B7280;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:4px;">Nomor Tiket</span>
+                    <strong style="font-size:17px;color:#16294F;font-family:ui-monospace,Menlo,monospace;letter-spacing:0.04em;">
+                      {{ ticket.number }}
+                    </strong>
+                    <span style="display:inline-block;margin-left:8px;padding:2px 8px;font-size:11px;font-weight:600;color:#FFFFFF;background-color:{% if ticket.ticket_type == 'PR' %}#B42318{% else %}#0F7F79{% endif %};border-radius:10px;">
+                      {{ ticket.get_ticket_type_display }}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:16px 20px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="font-size:13.5px;line-height:1.8;">
+                      <tr>
+                        <td width="32%" style="color:#6B7280;vertical-align:top;">Subjek</td>
+                        <td style="color:#111827;font-weight:600;vertical-align:top;">{{ ticket.subject }}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#6B7280;vertical-align:top;">Perusahaan / Unit</td>
+                        <td style="color:#111827;vertical-align:top;">{{ ticket.company|default:"—" }}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#6B7280;vertical-align:top;">Status Terkini</td>
+                        <td style="color:#111827;vertical-align:top;">
+                          <strong style="color:#D97706;">{{ ticket.get_status_display }}</strong>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="color:#6B7280;vertical-align:top;">Waktu Buka</td>
+                        <td style="color:#111827;vertical-align:top;">{{ opened_formatted }} WIB</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#6B7280;vertical-align:top;">Total Durasi</td>
+                        <td style="color:#D97706;font-weight:700;vertical-align:top;">{{ duration_display }}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Button CTA -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:24px;">
+                <tr>
+                  <td align="center">
+                    <a href="{{ ticket_url }}" target="_blank" style="display:inline-block;background-color:#16294F;color:#FFFFFF;font-size:14px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:6px;box-shadow:0 1px 2px rgba(0,0,0,0.1);">
+                      Tinjau Tiket {{ ticket.number }} di Sistem &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#F9FAFB;padding:18px 28px;border-top:1px solid #E5E7EB;font-size:12px;color:#6B7280;line-height:1.6;text-align:center;">
+              Email otomatis ini dikirimkan oleh sistem <strong>{{ app_name }}</strong>.<br>
+              {{ company_name }} · Anda menerima email ini karena terdaftar sebagai penerima eskalasi Project Manager / Engineer.
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

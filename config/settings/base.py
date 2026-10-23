@@ -169,6 +169,25 @@ APP_VERSION = "0.2.0"
 # Slug path Django Admin (dapat diubah lewat env var untuk keamanan pentest)
 ADMIN_URL = env("DJANGO_ADMIN_URL", default="django-admin/")
 
+# ── Notifikasi & Eskalasi Email 3 Fase ────────────────────────────────────
+SITE_BASE_URL = env("SITE_BASE_URL", default="http://localhost:8000")
+# Fase 1 (1 Hari): Lead NSM
+ESCALATION_LEAD_EMAIL = env("ESCALATION_LEAD_EMAIL", default="lead.nsm@initech.co.id")
+# Fase 2 (5 Hari): PM & Engineer
+ESCALATION_PM_EMAIL = env("ESCALATION_PM_EMAIL", default="pm@initech.co.id")
+ESCALATION_ENGINEER_EMAIL = env("ESCALATION_ENGINEER_EMAIL", default="engineer@initech.co.id")
+# Fase 3 (2 Minggu): Direktur
+ESCALATION_DIRECTOR_EMAIL = env("ESCALATION_DIRECTOR_EMAIL", default="galih.angga524@gmail.com")
+
+# ── Email SMTP ────────────────────────────────────────────────────────────
+EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = env("EMAIL_HOST", default="smtp.office365.com")
+EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Ticketing NMS <helpdesk@initech.co.id>")
+
 
 # ── Single Sign-On Office 365 ─────────────────────────────────────────────
 # Integrasi SAML 2.0 / OIDC sesungguhnya menyusul setelah tenant & app
