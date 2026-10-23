@@ -26,23 +26,21 @@ logger = logging.getLogger(__name__)
 
 
 def _normalize_recipients(recipients):
-    """Bantu normalisasi alamat email menjadi list of valid string."""
+    """Bantu normalisasi alamat email menjadi list of valid string, mendukung multi-email pisahan koma."""
     if not recipients:
         return []
-    if isinstance(recipients, str):
-        candidates = [r.strip() for r in recipients.split(",") if r.strip()]
-    elif isinstance(recipients, (list, tuple, set)):
-        candidates = [str(r).strip() for r in recipients if r and str(r).strip()]
-    else:
-        candidates = [str(recipients).strip()]
-
-    # Unik tanpa merusak urutan
+    raw_list = [recipients] if isinstance(recipients, str) else list(recipients)
     seen = set()
     cleaned = []
-    for c in candidates:
-        if c.lower() not in seen:
-            seen.add(c.lower())
-            cleaned.append(c)
+    for item in raw_list:
+        if not item:
+            continue
+        # Pecah jika ada tanda koma atau titik koma di dalam string
+        for part in str(item).replace(";", ",").split(","):
+            email = part.strip()
+            if email and email.lower() not in seen:
+                seen.add(email.lower())
+                cleaned.append(email)
     return cleaned
 
 
