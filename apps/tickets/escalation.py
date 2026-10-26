@@ -174,13 +174,14 @@ def send_escalation_email(ticket, level="lead", recipients=None, dry_run=False, 
         return False
 
 
-def process_all_escalations(now=None, dry_run=False):
+def process_all_escalations(now=None, dry_run=False, force=False):
     """
     Pindai seluruh tiket PR & FR yang memenuhi syarat 3 fase eskalasi:
     1. Fase 1: >= 1 Hari  -> Lead NSM
     2. Fase 2: >= 5 Hari  -> PM & Engineer
     3. Fase 3: >= 14 Hari -> Direktur
 
+    Jika force=True, abaikan status apakah tiket sudah pernah dieskalasi sebelumnya.
     Mengembalikan dict rekap hasil eksekusi.
     """
     # Sinkronisasi status tiket yang sudah melewati 60 menit menjadi Outstanding
@@ -197,32 +198,23 @@ def process_all_escalations(now=None, dry_run=False):
     target_types = [Ticket.Type.PROBLEM, Ticket.Type.FEATURE]
     base_qs = Ticket.objects.exclude(status=Ticket.Status.CLOSED).filter(ticket_type__in=target_types)
 
-    # 1. Fase 1: Umur >= 1 Hari (belum pernah eskalasi lead)
-    lead_candidates = (
-        base_qs.filter(
-            opened_at__lte=one_day_ago,
-            escalated_to_lead_at__isnull=True,
-        )
-        .select_related("assignee")
-    )
+    # 1. Fase 1: Umur >= 1 Hari
+    lead_qs = base_qs.filter(opened_at__lte=one_day_ago)
+    if not force:
+        lead_qs = lead_qs.filter(escalated_to_lead_at__isnull=True)
+    lead_candidates = lead_qs.select_related("assignee")
 
-    # 2. Fase 2: Umur >= 5 Hari (belum pernah eskalasi pm)
-    pm_candidates = (
-        base_qs.filter(
-            opened_at__lte=five_days_ago,
-            escalated_to_pm_at__isnull=True,
-        )
-        .select_related("assignee")
-    )
+    # 2. Fase 2: Umur >= 5 Hari
+    pm_qs = base_qs.filter(opened_at__lte=five_days_ago)
+    if not force:
+        pm_qs = pm_qs.filter(escalated_to_pm_at__isnull=True)
+    pm_candidates = pm_qs.select_related("assignee")
 
-    # 3. Fase 3: Umur >= 2 Minggu / 14 Hari (belum pernah eskalasi direktur)
-    director_candidates = (
-        base_qs.filter(
-            opened_at__lte=two_weeks_ago,
-            escalated_to_director_at__isnull=True,
-        )
-        .select_related("assignee")
-    )
+    # 3. Fase 3: Umur >= 2 Minggu / 14 Hari
+    dir_qs = base_qs.filter(opened_at__lte=two_weeks_ago)
+    if not force:
+        dir_qs = dir_qs.filter(escalated_to_director_at__isnull=True)
+    director_candidates = dir_qs.select_related("assignee")
 
     results = {
         "lead_candidates": lead_candidates.count(),

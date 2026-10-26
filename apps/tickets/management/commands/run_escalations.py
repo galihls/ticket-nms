@@ -9,10 +9,11 @@ Dijalankan via Cron setiap hari:
 
 Opsi pengujian:
     python manage.py run_escalations --dry-run
-    python manage.py run_escalations --test-lead
-    python manage.py run_escalations --test-pm
-    python manage.py run_escalations --test-director
-    python manage.py run_escalations --test-director --smtp
+    python manage.py run_escalations --force
+    python manage.py run_escalations --test-lead [nomor_tiket]
+    python manage.py run_escalations --test-pm [nomor_tiket]
+    python manage.py run_escalations --test-director [nomor_tiket]
+    python manage.py run_escalations --smtp
 """
 
 import getpass
@@ -34,6 +35,11 @@ class Command(BaseCommand):
             "--dry-run",
             action="store_true",
             help="Simulasikan pengecekan tanpa mengirim email atau mengubah database.",
+        )
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help="Paksa pengiriman eskalasi meskipun tiket sudah pernah dieskalasi sebelumnya (abaikan penanda tanggal).",
         )
         parser.add_argument(
             "--test-lead",
@@ -72,12 +78,14 @@ class Command(BaseCommand):
         )
 
     def _get_test_ticket(self, t_num):
-        if t_num == "__latest__":
-            return Ticket.objects.exclude(status=Ticket.Status.CLOSED).first() or Ticket.objects.first()
-        return Ticket.objects.filter(number=t_num).first()
+        if not t_num or t_num == "__latest__":
+            # Ambil tiket aktif tertua (paling lama dibuka)
+            return Ticket.objects.exclude(status=Ticket.Status.CLOSED).order_by("opened_at").first() or Ticket.objects.first()
+        return Ticket.objects.filter(number__iexact=t_num.strip()).first()
 
     def handle(self, *args, **options):
         dry_run = options["dry_run"]
+        force = options["force"]
         now = timezone.now()
 
         # Sinkronisasi status tiket yang sudah > 60 menit menjadi Outstanding
@@ -117,6 +125,7 @@ class Command(BaseCommand):
             self.stdout.write(f"Nomor Tiket : {ticket.number}")
             self.stdout.write(f"Subjek      : {ticket.subject}")
             self.stdout.write(f"Status      : {ticket.get_status_display()}")
+            self.stdout.write(f"Durasi      : {ticket.duration_display}")
             self.stdout.write(f"Penerima    : {lead_email}")
             self.stdout.write(f"Link Tiket  : {settings.SITE_BASE_URL.rstrip('/')}{ticket.get_absolute_url()}\n")
 
@@ -141,6 +150,7 @@ class Command(BaseCommand):
             self.stdout.write(f"Nomor Tiket : {ticket.number}")
             self.stdout.write(f"Subjek      : {ticket.subject}")
             self.stdout.write(f"Status      : {ticket.get_status_display()}")
+            self.stdout.write(f"Durasi      : {ticket.duration_display}")
             self.stdout.write(f"Penerima 1  : {pm_email}")
             self.stdout.write(f"Penerima 2  : {eng_email}")
             self.stdout.write(f"Link Tiket  : {settings.SITE_BASE_URL.rstrip('/')}{ticket.get_absolute_url()}\n")
@@ -164,13 +174,13 @@ class Command(BaseCommand):
             self.stdout.write(f"Nomor Tiket : {ticket.number}")
             self.stdout.write(f"Subjek      : {ticket.subject}")
             self.stdout.write(f"Status      : {ticket.get_status_display()}")
+            self.stdout.write(f"Durasi      : {ticket.duration_display}")
             self.stdout.write(f"Penerima    : {dir_email}")
             self.stdout.write(f"Link Tiket  : {settings.SITE_BASE_URL.rstrip('/')}{ticket.get_absolute_url()}\n")
 
             ok = send_escalation_email(ticket, level="director", dry_run=dry_run, connection=conn)
             if ok:
                 self.stdout.write(self.style.SUCCESS(f"✓ BERHASIL! Email eskalasi Direktur telah terkirim ke {dir_email}."))
-                self.stdout.write(self.style.NOTICE("Silakan periksa kotak masuk (Inbox/Spam) akun penerima."))
             else:
                 self.stdout.write(self.style.ERROR("✗ Gagal mengirim email eskalasi Direktur. Periksa kredensial SMTP."))
             return
@@ -179,6 +189,8 @@ class Command(BaseCommand):
         self.stdout.write(self.style.NOTICE(f"=== PROSES ESKALASI TIKET OTOMATIS ({now.strftime('%d/%m/%Y %H:%M:%S')}) ==="))
         if dry_run:
             self.stdout.write(self.style.WARNING("Mode: DRY-RUN (simulasi tanpa kirim email asli)"))
+        if force:
+            self.stdout.write(self.style.WARNING("Mode: FORCE (mengabaikan tanda sudah terkirim)"))
 
         lead_email = getattr(settings, "ESCALATION_LEAD_EMAIL", "lead.nsm@initech.co.id")
         pm_email = getattr(settings, "ESCALATION_PM_EMAIL", "pm@initech.co.id")
@@ -191,9 +203,39 @@ class Command(BaseCommand):
         self.stdout.write(f"Fase 3 (>=2 minggu): {dir_email}")
         self.stdout.write(f"Base URL Link Tiket: {base_url}\n")
 
-        results = process_all_escalations(now=now, dry_run=dry_run)
+        # ── Diagnosis Seluruh Tiket Aktif ────────────────────────────────────
+        target_types = [Ticket.Type.PROBLEM, Ticket.Type.FEATURE]
+        active_tickets = Ticket.objects.exclude(status=Ticket.Status.CLOSED).filter(ticket_type__in=target_types).order_by("opened_at")
+
+        self.stdout.write(self.style.NOTICE(f"--- DAFTAR TIKET AKTIF (Total: {active_tickets.count()} tiket PR & FR) ---"))
+        if not active_tickets.exists():
+            self.stdout.write("Tidak ada tiket Problem (PR) atau Feature (FR) yang sedang aktif.\n")
+
+        for t in active_tickets:
+            age_days = (now - t.opened_at).total_seconds() / 86400.0
+
+            def _status_str(dt, min_days):
+                if dt:
+                    return f"✓ Sudah Terkirim ({timezone.localtime(dt).strftime('%d/%m/%Y %H:%M')})"
+                if age_days >= min_days:
+                    return "SIAP KIRIM"
+                return f"Belum (butuh {min_days}h, baru {age_days:.1f}h)"
+
+            s1 = _status_str(t.escalated_to_lead_at, 1.0)
+            s2 = _status_str(t.escalated_to_pm_at, 5.0)
+            s3 = _status_str(t.escalated_to_director_at, 14.0)
+
+            self.stdout.write(f"• Tiket {t.number} [{t.get_ticket_type_display()}] {t.subject[:35]}")
+            self.stdout.write(f"  Status: {t.get_status_display()} | Umur: {t.duration_display} ({age_days:.2f} hari)")
+            self.stdout.write(f"  - Fase 1 (Lead   >=1h) : {s1}")
+            self.stdout.write(f"  - Fase 2 (PM/Eng >=5h) : {s2}")
+            self.stdout.write(f"  - Fase 3 (Direk  >=14h): {s3}\n")
 
         self.stdout.write("-" * 55)
+
+        # ── Proses Eskalasi ──────────────────────────────────────────────────
+        results = process_all_escalations(now=now, dry_run=dry_run, force=force)
+
         self.stdout.write(f"Kandidat Fase 1 Lead (1 hari)        : {results['lead_candidates']}")
         self.stdout.write(f"Terkirim ke Lead NSM                 : {results['lead_sent']}")
         self.stdout.write(f"Kandidat Fase 2 PM & Eng (5 hari)    : {results['pm_candidates']}")
