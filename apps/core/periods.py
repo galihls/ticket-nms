@@ -105,7 +105,13 @@ def resolve(request, default=DEFAULT_PRESET):
     elif preset == "shift_4":
         return DateRange(preset, today, today, time(19, 30), time(23, 0))
     elif preset == "shift_5":
-        # 23:00 to 03:00 next day
+        # Shift 5: 23:00 - 03:00 (melewati pergantian hari / tengah malam).
+        # Jika diakses sebelum jam 23:00 (misalnya saat laporan dibuat jam 03:00 pagi),
+        # maka shift yang dilaporkan adalah shift semalam: kemarin 23:00 s.d. hari ini 03:00.
+        # Jika diakses jam 23:00 ke atas, shift baru saja dimulai: hari ini 23:00 s.d. besok 03:00.
+        now_local = timezone.localtime()
+        if now_local.hour < 23:
+            return DateRange(preset, today - timedelta(days=1), today, time(23, 0), time(3, 0))
         return DateRange(preset, today, today + timedelta(days=1), time(23, 0), time(3, 0))
     elif preset == "shift_6":
         return DateRange(preset, today, today, time(3, 0), time(7, 30))
