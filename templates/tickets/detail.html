@@ -322,6 +322,35 @@
               <span class="meta-list__val">{{ ticket.company }}</span>
             </div>
           {% endif %}
+          {% if ticket.customer_id %}
+            <div class="meta-list__row">
+              <span class="meta-list__key">Customer ID</span>
+              <span class="meta-list__val mono"><strong>{{ ticket.customer_id }}</strong></span>
+            </div>
+          {% endif %}
+          {% if ticket.partner %}
+            <div class="meta-list__row">
+              <span class="meta-list__key">Partner</span>
+              <span class="meta-list__val">{{ ticket.partner }}</span>
+            </div>
+          {% endif %}
+          {% if ticket.service_name or ticket.service_id %}
+            <div class="meta-list__row">
+              <span class="meta-list__key">Service</span>
+              <span class="meta-list__val">
+                {{ ticket.service_name|default:"—" }}
+                {% if ticket.service_id %}<span class="mono muted">({{ ticket.service_id }})</span>{% endif %}
+              </span>
+            </div>
+          {% endif %}
+          {% if ticket.device_solution or ticket.brand %}
+            <div class="meta-list__row">
+              <span class="meta-list__key">Device / Brand</span>
+              <span class="meta-list__val">
+                {{ ticket.device_solution|default:"" }}{% if ticket.device_solution and ticket.brand %} · {% endif %}{{ ticket.brand|default:"" }}
+              </span>
+            </div>
+          {% endif %}
           {% if ticket.address %}
             <div class="meta-list__row">
               <span class="meta-list__key">Address</span>

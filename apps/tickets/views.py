@@ -1,8 +1,10 @@
+import json
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import models
 from django.db.models import Count, Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -12,8 +14,8 @@ from apps.accounts.models import User
 from apps.core import periods
 from apps.core.models import ActivityLog, Notification
 
-from .forms import GROUPS, CloseTicketForm, ReplyForm, TicketForm, CompanyForm
-from .models import Ticket, TicketReply, Company
+from .forms import GROUPS, CloseTicketForm, ReplyForm, TicketForm, CompanyForm, CompanyServiceForm
+from .models import Ticket, TicketReply, Company, CompanyService
 
 SORTS = [
     ("-opened_at", "Newest created"),
@@ -157,6 +159,29 @@ def ticket_detail(request, number):
     })
 
 
+def _get_companies_data_json():
+    """Serialize active companies and their services for dynamic form population."""
+    data = {}
+    for c in Company.objects.filter(is_active=True).prefetch_related("services").order_by("name"):
+        data[c.name] = {
+            "id": c.id,
+            "name": c.name,
+            "customer_id": c.customer_id,
+            "partner": c.partner,
+            "services": [
+                {
+                    "id": s.id,
+                    "service_id": s.service_id,
+                    "service_name": s.service_name,
+                    "device_solution": s.device_solution,
+                    "brand": s.brand,
+                }
+                for s in c.services.filter(is_active=True)
+            ]
+        }
+    return json.dumps(data)
+
+
 @login_required
 def ticket_create(request):
     form = TicketForm(request.POST or None)
@@ -203,6 +228,7 @@ def ticket_create(request):
         "number_preview": preview_numbers.get(preview_type, Ticket.next_number(preview_type)),
         "preview_numbers": preview_numbers,
         "preview_type": preview_type,
+        "companies_data_json": _get_companies_data_json(),
         "is_edit": False,
     })
 
@@ -234,6 +260,7 @@ def ticket_edit(request, number):
         "ticket": ticket,
         "number_preview": ticket.number,
         "preview_type": ticket.ticket_type,
+        "companies_data_json": _get_companies_data_json(),
         "is_edit": True,
     })
 
@@ -551,10 +578,16 @@ def company_list(request):
     else:
         form = CompanyForm()
 
-    qs = Company.objects.all()
+    qs = Company.objects.prefetch_related("services").all()
     q = request.GET.get("q", "").strip()
     if q:
-        qs = qs.filter(Q(name__icontains=q) | Q(code__icontains=q) | Q(contact_person__icontains=q))
+        qs = qs.filter(
+            Q(name__icontains=q) |
+            Q(code__icontains=q) |
+            Q(customer_id__icontains=q) |
+            Q(partner__icontains=q) |
+            Q(contact_person__icontains=q)
+        )
 
     companies = list(qs)
     # Calculate ticket counts per company
@@ -565,12 +598,15 @@ def company_list(request):
     )
     for c in companies:
         c.total_tickets = ticket_counts.get(c.name, 0)
+        c.active_services = list(c.services.all())
+        c.total_services = len(c.active_services)
 
     ctx = {
         "page_title": "Companies",
         "breadcrumb": [("Companies", None)],
         "companies": companies,
         "form": form,
+        "service_form": CompanyServiceForm(),
         "query": q,
         "total_count": len(companies),
         "active_count": sum(1 for c in companies if c.is_active),
@@ -605,8 +641,63 @@ def company_edit(request, pk):
         "breadcrumb": [("Companies", reverse("tickets:company_list")), ("Edit", None)],
         "company": company,
         "form": form,
+        "services": company.services.all(),
+        "service_form": CompanyServiceForm(),
     }
     return render(request, "tickets/company_form.html", ctx)
+
+
+@login_required
+@require_POST
+def company_service_create(request, company_pk):
+    """Add a service under a corporate client."""
+    if not (request.user.is_staff or request.user.is_superuser):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Only administrators can manage company services.")
+
+    company = get_object_or_404(Company, pk=company_pk)
+    service_id = request.POST.get("service_id", "").strip()
+    service_name = request.POST.get("service_name", "").strip()
+    device_solution = request.POST.get("device_solution", "").strip()
+    brand = request.POST.get("brand", "").strip()
+
+    if not service_name:
+        messages.error(request, "Service / Product name is required.")
+    else:
+        CompanyService.objects.create(
+            company=company,
+            service_id=service_id,
+            service_name=service_name,
+            device_solution=device_solution,
+            brand=brand,
+        )
+        messages.success(request, f"Service '{service_name}' added to {company.name}.")
+
+    next_url = request.POST.get("next")
+    return redirect(next_url or "tickets:company_list")
+
+
+@login_required
+@require_POST
+def company_service_delete(request, pk):
+    """Delete a company service."""
+    if not (request.user.is_staff or request.user.is_superuser):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Only administrators can manage company services.")
+
+    service = get_object_or_404(CompanyService, pk=pk)
+    comp_name = service.company.name
+    s_name = service.service_name
+    service.delete()
+    messages.success(request, f"Service '{s_name}' removed from {comp_name}.")
+    next_url = request.POST.get("next")
+    return redirect(next_url or "tickets:company_list")
+
+
+@login_required
+def companies_data_api(request):
+    """API returning active companies and their services for frontend dynamic forms."""
+    return JsonResponse(json.loads(_get_companies_data_json()))
 
 
 @login_required

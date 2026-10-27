@@ -165,6 +165,58 @@
               {% for error in form.requester_phone.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
             </div>
 
+            <div class="form-row">
+              <label class="form-label" for="{{ form.customer_id.id_for_label }}">
+                Customer ID
+              </label>
+              {{ form.customer_id }}
+              <div class="form-help">Terisi otomatis sesuai company yang dipilih.</div>
+            </div>
+
+            <div class="form-row">
+              <label class="form-label" for="{{ form.partner.id_for_label }}">
+                Partner
+              </label>
+              {{ form.partner }}
+              <div class="form-help">Partner / vendor pihak ketiga (opsional).</div>
+            </div>
+
+            <div class="form-row span-full">
+              <label class="form-label" for="{{ form.company_service.id_for_label }}">
+                Pilihan Layanan / Service
+              </label>
+              {{ form.company_service }}
+              <div class="form-help">Pilih layanan atau produk yang terdaftar pada perusahaan ini.</div>
+            </div>
+
+            <div class="form-row">
+              <label class="form-label" for="{{ form.service_id.id_for_label }}">
+                Service ID
+              </label>
+              {{ form.service_id }}
+            </div>
+
+            <div class="form-row">
+              <label class="form-label" for="{{ form.service_name.id_for_label }}">
+                Nama Layanan / Produk
+              </label>
+              {{ form.service_name }}
+            </div>
+
+            <div class="form-row">
+              <label class="form-label" for="{{ form.device_solution.id_for_label }}">
+                Device / Solution
+              </label>
+              {{ form.device_solution }}
+            </div>
+
+            <div class="form-row">
+              <label class="form-label" for="{{ form.brand.id_for_label }}">
+                Brand
+              </label>
+              {{ form.brand }}
+            </div>
+
             <div class="form-row span-full">
               <label class="form-label" for="{{ form.tags.id_for_label }}">
                 Tags
@@ -328,6 +380,117 @@ document.addEventListener("DOMContentLoaded", function() {
   if(catSelect) catSelect.addEventListener('change', updateVisibility);
   
   updateVisibility();
+
+  // Dynamic Company & Service Catalog
+  const companiesData = {{ companies_data_json|default:"{}"|safe }};
+  const companySelect = document.getElementById('id_company');
+  const customerIdInput = document.getElementById('id_customer_id');
+  const partnerInput = document.getElementById('id_partner');
+  const serviceSelect = document.getElementById('id_company_service');
+  const serviceIdInput = document.getElementById('id_service_id');
+  const serviceNameInput = document.getElementById('id_service_name');
+  const deviceSolutionInput = document.getElementById('id_device_solution');
+  const brandInput = document.getElementById('id_brand');
+
+  const initialServiceId = "{{ form.company_service.value|default:'' }}";
+
+  function populateServicesForCompany(companyName, selectedServiceId, overwriteDetails) {
+    if (!serviceSelect) return;
+    const comp = companiesData[companyName];
+
+    serviceSelect.innerHTML = '';
+
+    if (!comp || !comp.services || comp.services.length === 0) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = comp ? 'No registered services for this company (fill manual below)' : 'Select company first...';
+      serviceSelect.appendChild(opt);
+      return;
+    }
+
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = 'Select service / product (optional)...';
+    serviceSelect.appendChild(defaultOpt);
+
+    let foundSelected = false;
+    comp.services.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      let label = s.service_name;
+      if (s.service_id) label += ` (${s.service_id})`;
+      if (s.device_solution) label += ` - ${s.device_solution}`;
+      opt.textContent = label;
+      
+      opt.dataset.serviceId = s.service_id || '';
+      opt.dataset.serviceName = s.service_name || '';
+      opt.dataset.deviceSolution = s.device_solution || '';
+      opt.dataset.brand = s.brand || '';
+
+      if (selectedServiceId && String(selectedServiceId) === String(s.id)) {
+        opt.selected = true;
+        foundSelected = true;
+      }
+      serviceSelect.appendChild(opt);
+    });
+
+    if (foundSelected && overwriteDetails) {
+      applyServiceDetails();
+    }
+  }
+
+  function applyServiceDetails() {
+    if (!serviceSelect) return;
+    const selectedOpt = serviceSelect.options[serviceSelect.selectedIndex];
+    if (selectedOpt && selectedOpt.value) {
+      if (serviceIdInput) serviceIdInput.value = selectedOpt.dataset.serviceId || '';
+      if (serviceNameInput) serviceNameInput.value = selectedOpt.dataset.serviceName || '';
+      if (deviceSolutionInput) deviceSolutionInput.value = selectedOpt.dataset.deviceSolution || '';
+      if (brandInput) brandInput.value = selectedOpt.dataset.brand || '';
+    }
+  }
+
+  if (companySelect) {
+    companySelect.addEventListener('change', function() {
+      const compName = this.value;
+      const comp = companiesData[compName];
+
+      if (comp) {
+        if (customerIdInput) customerIdInput.value = comp.customer_id || '';
+        if (partnerInput) partnerInput.value = comp.partner || '';
+      } else {
+        if (customerIdInput) customerIdInput.value = '';
+        if (partnerInput) partnerInput.value = '';
+      }
+
+      // Re-populate service dropdown
+      populateServicesForCompany(compName, null, false);
+
+      // Clear service fields on company change
+      if (serviceIdInput) serviceIdInput.value = '';
+      if (serviceNameInput) serviceNameInput.value = '';
+      if (deviceSolutionInput) deviceSolutionInput.value = '';
+      if (brandInput) brandInput.value = '';
+    });
+  }
+
+  if (serviceSelect) {
+    serviceSelect.addEventListener('change', function() {
+      if (this.value) {
+        applyServiceDetails();
+      }
+    });
+  }
+
+  // Initial load
+  if (companySelect && companySelect.value) {
+    populateServicesForCompany(companySelect.value, initialServiceId || serviceSelect.value, false);
+    const comp = companiesData[companySelect.value];
+    if (comp) {
+      if (customerIdInput && !customerIdInput.value) customerIdInput.value = comp.customer_id || '';
+      if (partnerInput && !partnerInput.value) partnerInput.value = comp.partner || '';
+    }
+  }
 });
 </script>
 {% endblock %}

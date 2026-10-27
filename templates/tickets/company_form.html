@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="row" style="max-width:720px;margin:0 auto">
+<div class="stack" style="max-width:800px;margin:0 auto">
   <div class="card" style="width:100%">
     <div class="card__header">
       <div>
@@ -25,6 +25,17 @@
           <label class="form-label" for="{{ form.name.id_for_label }}">Company Name *</label>
           {{ form.name }}
           {% if form.name.errors %}<div class="form-error">{{ form.name.errors.0 }}</div>{% endif %}
+        </div>
+
+        <div class="grid grid--2" style="gap:16px">
+          <div class="form-row">
+            <label class="form-label" for="{{ form.customer_id.id_for_label }}">Customer ID</label>
+            {{ form.customer_id }}
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="{{ form.partner.id_for_label }}">Partner (Optional)</label>
+            {{ form.partner }}
+          </div>
         </div>
 
         <div class="grid grid--2" style="gap:16px">
@@ -65,6 +76,99 @@
         </button>
       </div>
     </form>
+  </div>
+
+  {# ── Services Management Card ───────────────────────────────────────── #}
+  <div class="card mt-3" style="width:100%">
+    <div class="card__header" style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div class="card__title">Services / Products Catalog</div>
+        <div class="card__subtitle">Daftar layanan, perangkat, dan brand yang dimiliki oleh {{ company.name }}.</div>
+      </div>
+    </div>
+
+    {# Add Service Form #}
+    <div class="card__body" style="background:var(--surface-2);border-bottom:1px solid var(--line);padding:16px 20px">
+      <strong style="display:block;font-size:13px;margin-bottom:10px;color:var(--ink-800)">+ Tambah Layanan Baru</strong>
+      <form method="post" action="{% url 'tickets:company_service_create' company.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <div class="grid grid--4" style="gap:10px">
+          <div>
+            <label class="form-label" style="font-size:11.5px">Service ID</label>
+            <input type="text" name="service_id" class="form-input" placeholder="e.g. 250000003" style="height:32px;font-size:12.5px">
+          </div>
+          <div>
+            <label class="form-label" style="font-size:11.5px">Nama Service / Produk *</label>
+            <input type="text" name="service_name" class="form-input" placeholder="e.g. Managed Service Firewall" required style="height:32px;font-size:12.5px">
+          </div>
+          <div>
+            <label class="form-label" style="font-size:11.5px">Device / Solution</label>
+            <input type="text" name="device_solution" class="form-input" placeholder="e.g. Fwaas, Router" style="height:32px;font-size:12.5px">
+          </div>
+          <div>
+            <label class="form-label" style="font-size:11.5px">Brand</label>
+            <input type="text" name="brand" class="form-input" placeholder="e.g. Versa, Mikrotik" style="height:32px;font-size:12.5px">
+          </div>
+        </div>
+        <div style="margin-top:10px;text-align:right">
+          <button type="submit" class="btn btn--primary btn--sm">+ Simpan Layanan</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card__body card__body--flush">
+      <div class="table-wrap">
+        <table class="table table--compact">
+          <thead>
+            <tr>
+              <th>Service ID</th>
+              <th>Nama Layanan / Produk</th>
+              <th>Device / Solution</th>
+              <th>Brand</th>
+              <th style="text-align:right">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in services %}
+              <tr>
+                <td>
+                  {% if s.service_id %}
+                    <span class="mono strong">{{ s.service_id }}</span>
+                  {% else %}
+                    <span class="muted">—</span>
+                  {% endif %}
+                </td>
+                <td class="strong">{{ s.service_name }}</td>
+                <td>{{ s.device_solution|default:"—" }}</td>
+                <td>
+                  {% if s.brand %}
+                    <span class="badge badge--neutral">{{ s.brand }}</span>
+                  {% else %}
+                    <span class="muted">—</span>
+                  {% endif %}
+                </td>
+                <td style="text-align:right">
+                  <form method="post" action="{% url 'tickets:company_service_delete' s.pk %}" style="display:inline" onsubmit="return confirm('Hapus layanan {{ s.service_name }} ini?')">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <button type="submit" class="btn btn--sm btn--secondary" style="color:var(--danger);padding:2px 8px;height:24px;font-size:11px">
+                      Hapus
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="text-center muted" style="padding:20px">
+                  Belum ada layanan yang didaftarkan untuk perusahaan ini. Tambahkan di atas.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}

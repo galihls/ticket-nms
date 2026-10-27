@@ -78,6 +78,8 @@ class Company(models.Model):
     """Corporate / client entity. Admin can manage companies dynamically."""
     name = models.CharField("name", max_length=120, unique=True)
     code = models.CharField("code", max_length=32, blank=True, help_text="Short code / abbreviation")
+    customer_id = models.CharField("customer ID", max_length=64, blank=True, db_index=True)
+    partner = models.CharField("partner", max_length=120, blank=True)
     contact_person = models.CharField("contact person", max_length=120, blank=True)
     contact_phone = models.CharField("contact phone", max_length=32, blank=True)
     address = models.TextField("address", blank=True)
@@ -96,6 +98,31 @@ class Company(models.Model):
     @property
     def ticket_count(self):
         return Ticket.objects.filter(company=self.name).count()
+
+    @property
+    def service_count(self):
+        return self.services.filter(is_active=True).count()
+
+
+class CompanyService(models.Model):
+    """Layanan / produk yang dimiliki atau dilanggan oleh perusahaan."""
+    company = models.ForeignKey(Company, verbose_name="perusahaan", on_delete=models.CASCADE, related_name="services")
+    service_id = models.CharField("service ID", max_length=64, blank=True, db_index=True)
+    service_name = models.CharField("layanan / produk", max_length=150)
+    device_solution = models.CharField("perangkat / solusi", max_length=150, blank=True)
+    brand = models.CharField("brand", max_length=100, blank=True)
+    is_active = models.BooleanField("aktif", default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["company", "service_name"]
+        verbose_name = "layanan perusahaan"
+        verbose_name_plural = "layanan perusahaan"
+
+    def __str__(self):
+        sid = f"[{self.service_id}] " if self.service_id else ""
+        return f"{sid}{self.service_name} ({self.company.name})"
 
 
 class Ticket(TimeStampedModel):
@@ -183,6 +210,16 @@ class Ticket(TimeStampedModel):
     requester_email = models.EmailField("email pelapor", blank=True)
     requester_phone = models.CharField("nomor telepon", max_length=20)
     company = models.CharField("perusahaan / unit", max_length=120, db_index=True)
+    customer_id = models.CharField("customer ID", max_length=64, blank=True, db_index=True)
+    partner = models.CharField("partner", max_length=120, blank=True)
+    company_service = models.ForeignKey(
+        CompanyService, verbose_name="layanan terkait",
+        on_delete=models.SET_NULL, null=True, blank=True, related_name="tickets",
+    )
+    service_id = models.CharField("service ID", max_length=64, blank=True, db_index=True)
+    service_name = models.CharField("nama layanan", max_length=150, blank=True)
+    device_solution = models.CharField("perangkat / solusi", max_length=150, blank=True)
+    brand = models.CharField("brand", max_length=100, blank=True)
     address = models.TextField("alamat", blank=True, help_text="Alamat saat pembuatan tiket relokasi.")
     site_code = models.CharField("kode site", max_length=32, blank=True, db_index=True)
 

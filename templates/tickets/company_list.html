@@ -67,10 +67,11 @@
         <thead>
           <tr>
             <th>Company Name</th>
+            <th>Customer ID</th>
             <th>Code</th>
-            <th>Contact Person</th>
-            <th>Phone</th>
-            <th>Address</th>
+            <th>Partner</th>
+            <th>Contact</th>
+            <th class="num">Services</th>
             <th class="num">Tickets</th>
             <th>Status</th>
             <th style="text-align:right">Actions</th>
@@ -81,6 +82,16 @@
             <tr>
               <td>
                 <div class="strong" style="color:var(--ink-900)">{{ company.name }}</div>
+                {% if company.address %}
+                  <div class="muted truncate" style="max-width:200px;font-size:11.5px" title="{{ company.address }}">{{ company.address }}</div>
+                {% endif %}
+              </td>
+              <td>
+                {% if company.customer_id %}
+                  <span class="mono strong" style="color:var(--navy-700)">{{ company.customer_id }}</span>
+                {% else %}
+                  <span class="muted">—</span>
+                {% endif %}
               </td>
               <td>
                 {% if company.code %}
@@ -89,10 +100,17 @@
                   <span class="muted">—</span>
                 {% endif %}
               </td>
-              <td>{{ company.contact_person|default:"—" }}</td>
-              <td>{{ company.contact_phone|default:"—" }}</td>
-              <td class="truncate" style="max-width:200px" title="{{ company.address }}">
-                {{ company.address|default:"—" }}
+              <td>{{ company.partner|default:"—" }}</td>
+              <td>
+                <div>{{ company.contact_person|default:"—" }}</div>
+                {% if company.contact_phone %}
+                  <div class="muted mono" style="font-size:11.5px">{{ company.contact_phone }}</div>
+                {% endif %}
+              </td>
+              <td class="num">
+                <a href="{% url 'tickets:company_edit' company.pk %}" class="badge {% if company.total_services > 0 %}badge--teal{% else %}badge--neutral{% endif %}" title="Manage services">
+                  {{ company.total_services }} service{{ company.total_services|pluralize }}
+                </a>
               </td>
               <td class="num">
                 {% if company.total_tickets > 0 %}
@@ -112,7 +130,7 @@
               </td>
               <td style="text-align:right">
                 <div class="row" style="gap:6px;justify-content:flex-end">
-                  <a href="{% url 'tickets:company_edit' company.pk %}" class="btn btn--ghost btn--sm" title="Edit company details">
+                  <a href="{% url 'tickets:company_edit' company.pk %}" class="btn btn--ghost btn--sm" title="Edit company & services">
                     Edit
                   </a>
                   <form method="post" action="{% url 'tickets:company_toggle' company.pk %}" style="display:inline">
@@ -134,7 +152,7 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="8">
+              <td colspan="9">
                 <div class="empty">
                   <div class="empty__title">No companies found</div>
                   <div class="empty__desc">
@@ -169,6 +187,17 @@
           <label class="form-label" for="{{ form.name.id_for_label }}">Company Name *</label>
           {{ form.name }}
           {% if form.name.errors %}<div class="form-error">{{ form.name.errors.0 }}</div>{% endif %}
+        </div>
+
+        <div class="grid grid--2" style="gap:12px">
+          <div class="form-row">
+            <label class="form-label" for="{{ form.customer_id.id_for_label }}">Customer ID</label>
+            {{ form.customer_id }}
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="{{ form.partner.id_for_label }}">Partner (Optional)</label>
+            {{ form.partner }}
+          </div>
         </div>
 
         <div class="grid grid--2" style="gap:12px">
