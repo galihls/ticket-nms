@@ -36,8 +36,8 @@
         <a href="?status=closed" class="chip {% if 'closed'|in_list:selected.status %}is-active{% endif %}">
           Closed <span class="chip__count">{{ facets.closed }}</span>
         </a>
-        <a href="?high_priority=1" class="chip {% if selected.high_priority == '1' %}is-active{% endif %}" style="color:var(--danger-700)">
-          <span class="badge__dot" style="background:var(--danger-500);width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:4px"></span>High Priority <span class="chip__count">{{ facets.high_priority }}</span>
+        <a href="?high_priority=1" class="chip chip--danger {% if selected.high_priority == '1' %}is-active{% endif %}"{% if selected.high_priority != '1' %} style="color:var(--danger)"{% endif %}>
+          <span class="badge__dot" style="background:{% if selected.high_priority == '1' %}#FCA5A5{% else %}var(--danger){% endif %};width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:4px"></span>High Priority <span class="chip__count">{{ facets.high_priority }}</span>
         </a>
       </div>
 
